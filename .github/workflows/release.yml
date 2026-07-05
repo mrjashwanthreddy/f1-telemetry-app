@@ -1,0 +1,61 @@
+name: Build & Release Standalone Executable
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g. v1.0.0)
+  workflow_dispatch: # Enable manual run from the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Package Standalone Windows App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build Fat Spring Boot JAR
+        run: |
+          mvn clean package -DskipTests
+
+      - name: Generate Custom JRE (jlink)
+        shell: pwsh
+        run: |
+          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi --output target/custom-runtime
+
+      - name: Stage Packaging Input
+        shell: pwsh
+        run: |
+          mkdir target/input
+          copy target/f1-telemetry-0.0.1-SNAPSHOT.jar target/input/f1-telemetry-0.0.1-SNAPSHOT.jar
+
+      - name: Package Standalone EXE (jpackage)
+        shell: pwsh
+        run: |
+          jpackage --type app-image --dest target/dist --name F1Telemetry --input target/input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target/custom-runtime --win-console
+
+      - name: Compress Release Artifacts (Zip)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path target/dist/F1Telemetry -DestinationPath target/dist/F1Telemetry-Windows.zip
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/dist/F1Telemetry-Windows.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
