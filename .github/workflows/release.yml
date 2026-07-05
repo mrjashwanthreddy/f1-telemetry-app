@@ -53,6 +53,8 @@ jobs:
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'Manual Build (latest)' }}
           files: target/dist/F1Telemetry-Windows.zip
           draft: false
           prerelease: false
