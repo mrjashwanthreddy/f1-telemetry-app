@@ -1,0 +1,12 @@
+# F1 Telemetry Project Rules
+
+This file informs any AI coding agent about the rules and structure of this project. To minimize token usage and maintain strict consistency, please refer directly to the structured documentation under the `.claude/` directory:
+
+- **Coding Rules & Standards**: Read [.claude/rules.md](file:///.claude/rules.md) for naming, exceptions, performance optimizations, and logging rules.
+- **System Architecture**: Read [.claude/architecture.md](file:///.claude/architecture.md) for thread boundaries, Netty UDP routing, Caffeine state cache, and asynchronous database write paths.
+- **Binary Telemetry Specs**: Read [.claude/udp-spec.md](file:///.claude/udp-spec.md) for the exact C-struct formats, byte counts, and field definitions parsed from the Codemasters F1 Game UDP stream.
+- **PostgreSQL Database & Downsampling**: Read [.claude/db-schema.md](file:///.claude/db-schema.md) for tables, columns, relations, JPA repository structures, and the 10Hz persistence cache logic.
+- **Frontend SPA Web Client**: Read [.claude/frontend.md](file:///.claude/frontend.md) for SockJS / STOMP WebSocket channels, dashboard DOM tabs, and Chart.js telemetry trace mappings.
+- **Executable Packaging**: Read [.claude/packaging.md](file:///.claude/packaging.md) for minimal custom JRE (`jlink`) modules, fat Spring Boot JAR, and `jpackage` bundling options.
+
+Please update these configuration references whenever there are breaking changes to packet schemas, database migrations, or core routing properties.
