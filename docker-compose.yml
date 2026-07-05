@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: f1-telemetry-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=f1user
+      - POSTGRES_PASSWORD=f1pass
+      - POSTGRES_DB=f1telemetry
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U f1user -d f1telemetry"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Telemetry Live Dashboard</title>
+    <!-- Modern font -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    
+    <!-- SockJS and STOMP -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card">
+            <h1 class="auth-title">F1 TELEMETRY</h1>
+            <p class="auth-subtitle">Race Engineer Portal</p>
+            
+            <div id="auth-error" class="auth-error" style="display:none;"></div>
+            
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required placeholder="Enter username">
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter password">
+                </div>
+                <button type="submit" id="auth-submit-btn" class="auth-btn">LOGIN</button>
+            </form>
+            
+            <p class="auth-switch">
+                <span id="auth-switch-text">New engineer?</span> 
+                <a href="#" id="auth-switch-link" onclick="toggleAuthMode()">Sign up here</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="main-app" class="dashboard" style="display: none;">
+        <header>
+            <h1>F1 RACE ENGINEER</h1>
+            <nav class="tabs">
+                <button class="tab-btn active" onclick="switchTab('live-tab', this)">Live Dashboard</button>
+                <button class="tab-btn" onclick="switchTab('history-tab', this)">Session History</button>
+                <button class="tab-btn" onclick="switchTab('raw-tab', this)">Raw Data Inspector</button>
+            </nav>
+            <div style="display:flex; align-items:center; gap: 15px;">
+                <div id="connection-status" class="status disconnected">DISCONNECTED</div>
+                <button onclick="logout()" style="padding: 5px 10px; background:transparent; border: 1px solid var(--accent-red); color:var(--accent-red); border-radius: 4px; cursor: pointer;">Logout</button>
+            </div>
+        </header>
+
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- Live Dashboard Tab -->
+        <main id="live-tab" class="tab-content active telemetry-grid">
+            <!-- Left Column: Pedals & Steering -->
+            <section class="panel inputs-panel">
+                <h2>INPUTS</h2>
+                <div class="bars">
+                    <div class="bar-container">
+                        <div class="label">THR</div>
+                        <div class="bar-bg"><div id="throttle-bar" class="bar-fill throttle"></div></div>
+                        <div id="throttle-val" class="value">0%</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="label">BRK</div>
+                        <div class="bar-bg"><div id="brake-bar" class="bar-fill brake"></div></div>
+                        <div id="brake-val" class="value">0%</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Center Column: Core Telemetry -->
+            <section class="panel core-panel">
+                <div class="rpm-display">
+                    <div id="rpm-val" class="rpm-value">00000</div>
+                    <div class="rpm-label">RPM</div>
+                </div>
+                
+                <div class="rev-bar-container">
+                    <div id="rev-bar" class="rev-bar-fill"></div>
+                </div>
+
+                <div class="speed-gear-row">
+                    <div class="speed-display">
+                        <div id="speed-val" class="speed-value">0</div>
+                        <div class="unit">KM/H</div>
+                    </div>
+                    <div class="gear-display">
+                        <div id="gear-val" class="gear-value">N</div>
+                        <div class="unit">GEAR</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Status & Tires -->
+            <section class="panel status-panel">
+                <h2>RACE STATUS</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">LAP</div>
+                        <div id="lap-num" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">POSITION</div>
+                        <div id="position" class="stat-value">P-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">FUEL</div>
+                        <div id="fuel" class="stat-value">0.0L</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">ERS</div>
+                        <div id="ers" class="stat-value">0%</div>
+                    </div>
+                </div>
+                
+                <h2 style="margin-top: 20px;">TYRES & DAMAGE</h2>
+                <div class="tyres-grid">
+                    <!-- FL -->
+                    <div class="tyre-box">
+                        <div class="tyre-label">FL</div>
+                        <div id="temp-fl" class="tyre-temp">0°C</div>
+                        <div class="wear-bar-bg"><div id="wear-fl" class="wear-bar-fill"></div></div>
+                    </div>
+                    <!-- FR -->
+                    <div class="tyre-box">
+                        <div class="tyre-label">FR</div>
+                        <div id="temp-fr" class="tyre-temp">0°C</div>
+                        <div class="wear-bar-bg"><div id="wear-fr" class="wear-bar-fill"></div></div>
+                    </div>
+                    <!-- RL -->
+                    <div class="tyre-box">
+                        <div class="tyre-label">RL</div>
+                        <div id="temp-rl" class="tyre-temp">0°C</div>
+                        <div class="wear-bar-bg"><div id="wear-rl" class="wear-bar-fill"></div></div>
+                    </div>
+                    <!-- RR -->
+                    <div class="tyre-box">
+                        <div class="tyre-label">RR</div>
+                        <div id="temp-rr" class="tyre-temp">0°C</div>
+                        <div class="wear-bar-bg"><div id="wear-rr" class="wear-bar-fill"></div></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Session History Tab -->
+        <main id="history-tab" class="tab-content" style="display: none;">
+            <section class="panel">
+                <h2>SESSION HISTORY</h2>
+                <div style="display:flex; gap: 20px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <h3>Past Sessions</h3>
+                        <ul id="session-list" class="session-list">
+                            <!-- Populated dynamically via history.js -->
+                            <li>Loading...</li>
+                        </ul>
+                    </div>
+                    <div style="flex: 2;">
+                        <h3 id="lap-details-title">Select a session</h3>
+                        <table class="lap-table">
+                            <thead>
+                                <tr>
+                                    <th>Lap</th>
+                                    <th>Sector 1 (s)</th>
+                                    <th>Sector 2 (s)</th>
+                                    <th>Sector 3 (s)</th>
+                                    <th>Total (s)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lap-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                        
+                        <div id="telemetry-chart-container" style="display: none; margin-top: 30px; background: rgba(25, 25, 30, 0.9); padding: 15px; border-radius: 8px;">
+                            <h3 id="telemetry-chart-title" style="margin-bottom: 10px;">Telemetry</h3>
+                            <canvas id="telemetryChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Raw Data Inspector Tab -->
+        <main id="raw-tab" class="tab-content" style="display: none;">
+            <section class="panel">
+                <div style="display:flex; justify-content: space-between; align-items:center;">
+                    <h2>RAW DATA INSPECTOR</h2>
+                    <button onclick="document.getElementById('raw-terminal').innerHTML=''" style="padding: 5px 10px; background:var(--accent-red); color:#fff; border:none; border-radius:3px; cursor:pointer;">Clear</button>
+                </div>
+                <div id="raw-terminal" class="terminal-output"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/history.js"></script>
+    <script>
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId).style.display = (tabId === 'live-tab') ? 'grid' : 'block';
+            btnElement.classList.add('active');
+            
+            if(tabId === 'history-tab' && typeof loadSessions === 'function') {
+                loadSessions();
+            }
+        }
+    </script>
+</body>
+</html>
