@@ -26,15 +26,82 @@ async function loadSessions() {
 
         sessions.forEach(session => {
             const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.paddingRight = '16px';
+            
             const date = new Date(session.timestamp).toLocaleString();
-            li.innerHTML = `<strong>${session.trackName}</strong><br/><small>${date}</small>`;
-            li.onclick = () => loadLapDetails(session.sessionId, session.trackName);
+            const typeLabel = session.sessionType || 'Session';
+            
+            const infoDiv = document.createElement('div');
+            infoDiv.style.flex = '1';
+            infoDiv.style.cursor = 'pointer';
+            infoDiv.innerHTML = `
+                <strong>${session.trackName}</strong>
+                <span style="margin-left:8px; padding:2px 7px; border-radius:3px; font-size:0.75rem; background:rgba(0,176,255,0.15); color:var(--accent-blue); font-weight:600;">${typeLabel}</span>
+                <br/><small style="color:var(--text-dim)">${date}</small>
+            `;
+            infoDiv.onclick = () => loadLapDetails(session.sessionId, session.trackName + ' · ' + typeLabel);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.style.background = 'transparent';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.padding = '8px';
+            deleteBtn.style.fontSize = '1.1rem';
+            deleteBtn.style.transition = 'transform 0.2s';
+            deleteBtn.title = "Delete Session";
+            
+            deleteBtn.onmouseenter = () => deleteBtn.style.transform = 'scale(1.2)';
+            deleteBtn.onmouseleave = () => deleteBtn.style.transform = 'scale(1.0)';
+            
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm(`Are you sure you want to delete the session at ${session.trackName} (${typeLabel})?`)) {
+                    deleteSession(session.sessionId);
+                }
+            };
+            
+            li.appendChild(infoDiv);
+            li.appendChild(deleteBtn);
             list.appendChild(li);
         });
 
     } catch (e) {
         console.error(e);
         list.innerHTML = '<li>Error loading sessions.</li>';
+    }
+}
+
+async function deleteSession(sessionId) {
+    const token = localStorage.getItem('jwtToken');
+    try {
+        const res = await fetch(`/api/history/sessions/${sessionId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.status === 401 || res.status === 403) {
+            logout();
+            return;
+        }
+        if (!res.ok) throw new Error("Failed to delete session");
+        
+        loadSessions();
+        
+        // Reset lap details view if details for this session were currently loaded
+        const lapTitle = document.getElementById('lap-details-title');
+        if (lapTitle && lapTitle.textContent.includes(sessionId)) {
+            lapTitle.textContent = 'Select a session';
+            document.getElementById('lap-table-body').innerHTML = '<tr><td colspan="5">Select a session to view lap details.</td></tr>';
+            document.getElementById('telemetry-chart-container').style.display = 'none';
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to delete session: " + e.message);
     }
 }
 
@@ -87,7 +154,7 @@ async function loadLapDetails(sessionId, trackName) {
                 <td>${s2}</td>
                 <td>${s3}</td>
                 <td><strong>${totalFormatted}</strong></td>
-                <td><button onclick="fetchTelemetry('${sessionId}', ${lap.lapNumber})" style="padding: 3px 8px; background:var(--primary-color); border:none; border-radius:3px; cursor:pointer;">View Telemetry</button></td>
+                <td><button class="telemetry-btn" onclick="fetchTelemetry('${sessionId}', ${lap.lapNumber})">View Telemetry</button></td>
             `;
             tbody.appendChild(tr);
         });

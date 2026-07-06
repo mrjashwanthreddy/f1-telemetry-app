@@ -10,4 +10,7 @@ import java.util.List;
 @Repository
 public interface LapTimeRecordRepository extends JpaRepository<LapTimeRecord, Long> {
     List<LapTimeRecord> findByRaceSessionOrderByLapNumberAsc(RaceSession raceSession);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByRaceSession(RaceSession raceSession);
 }

@@ -51,4 +51,20 @@ public class SessionHistoryController {
                 .map(session -> ResponseEntity.ok(telemetryRecordRepository.findBySessionIdAndCurrentLapNumOrderByTimestampAsc(sessionId, lapNumber)))
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<Void> deleteSession(@PathVariable String sessionId) {
+        return getAuthenticatedUser().flatMap(user -> sessionRepository.findBySessionId(sessionId)
+                .filter(session -> session.getUser().getId().equals(user.getId())))
+                .map(session -> {
+                    // Delete laps manually
+                    lapRepository.deleteByRaceSession(session);
+                    // Delete telemetry records
+                    telemetryRecordRepository.deleteBySessionId(sessionId);
+                    // Delete the session itself
+                    sessionRepository.delete(session);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -12,8 +12,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class LiveSessionState {
     
+    // Session UUID or game SessionUID
+    private String sessionId = java.util.UUID.randomUUID().toString();
+    
     // Track & Session
     private byte trackId;
+    private short sessionType;   // 0=Unknown,1=Practice,2=Qualifying,3=Race,4=Race2,5=Race3,6=TimeTrial
     private short weather;
     private short totalLaps;
     private short safetyCarStatus;

@@ -13,6 +13,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
+    <!-- Fastest Lap cinematic banner (hidden; shown by JS on FTLP event) -->
+    <div id="fastest-lap-banner" class="fastest-lap-banner" style="display:none;">
+        <span class="fastest-lap-icon">🏆</span>
+        <div style="text-align:center;">
+            <div class="fastest-lap-label">Fastest Lap</div>
+            <div id="fastest-lap-time" class="fastest-lap-time">—:——.———</div>
+        </div>
+        <span class="fastest-lap-icon">🏆</span>
+    </div>
+
     <div id="auth-overlay" class="auth-overlay">
         <div class="auth-card">
             <h1 class="auth-title">F1 TELEMETRY</h1>
@@ -45,7 +55,6 @@
             <nav class="tabs">
                 <button class="tab-btn active" onclick="switchTab('live-tab', this)">Live Dashboard</button>
                 <button class="tab-btn" onclick="switchTab('history-tab', this)">Session History</button>
-                <button class="tab-btn" onclick="switchTab('raw-tab', this)">Raw Data Inspector</button>
             </nav>
             <div style="display:flex; align-items:center; gap: 15px;">
                 <div id="connection-status" class="status disconnected">DISCONNECTED</div>
@@ -54,6 +63,17 @@
         </header>
 
         <div id="toast-container" class="toast-container"></div>
+
+        <!-- Session Event Log — live event feed for current session -->
+        <aside id="event-log-panel" class="event-log-panel">
+            <div class="event-log-header">⚡ Session Events</div>
+            <div id="event-log-entries" class="event-log-entries">
+                <div class="event-log-entry">
+                    <div class="event-log-dot info"></div>
+                    <div class="event-log-text" style="color: var(--text-dim);">Waiting for events…</div>
+                </div>
+            </div>
+        </aside>
 
         <!-- Live Dashboard Tab -->
         <main id="live-tab" class="tab-content active telemetry-grid">
@@ -70,6 +90,13 @@
                         <div class="label">BRK</div>
                         <div class="bar-bg"><div id="brake-bar" class="bar-fill brake"></div></div>
                         <div id="brake-val" class="value">0%</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="label">STR</div>
+                        <div style="flex: 1; height: 16px; background-color: rgba(0, 0, 0, 0.4); border-radius: 8px; position: relative; border: 1px solid rgba(255, 255, 255, 0.05); padding: 2px;">
+                            <div id="steer-marker" style="position: absolute; top: 2px; left: 50%; width: 10px; height: 10px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);"></div>
+                        </div>
+                        <div id="steer-val" class="value">0°</div>
                     </div>
                 </div>
             </section>
@@ -117,6 +144,14 @@
                         <div class="stat-label">ERS</div>
                         <div id="ers" class="stat-value">0%</div>
                     </div>
+                    <div class="stat-box">
+                        <div class="stat-label">LAP TIME</div>
+                        <div id="lap-time" class="stat-value">0:00.000</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">COMPOUND</div>
+                        <div id="tyre-compound" class="stat-value" style="font-size: 1.6rem; line-height: 2.2rem; font-weight: 800;">DRY</div>
+                    </div>
                 </div>
                 
                 <h2 style="margin-top: 20px;">TYRES & DAMAGE</h2>
@@ -144,6 +179,23 @@
                         <div class="tyre-label">RR</div>
                         <div id="temp-rr" class="tyre-temp">0°C</div>
                         <div class="wear-bar-bg"><div id="wear-rr" class="wear-bar-fill"></div></div>
+                    </div>
+                </div>
+                
+                <!-- Front Wing Damage visual section -->
+                <div class="wing-damage-container" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase;">Front Wing Damage</div>
+                    <div style="display: flex; justify-content: space-between; gap: 20px;">
+                        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dim);">FL</span>
+                            <div class="wear-bar-bg" style="flex: 1; height: 8px;"><div id="wing-l-fill" class="wear-bar-fill" style="width: 0%; background-color: var(--accent-green);"></div></div>
+                            <span id="wing-l-val" style="font-size: 0.85rem; font-weight: 700; min-width: 30px; text-align: right;">0%</span>
+                        </div>
+                        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dim);">FR</span>
+                            <div class="wear-bar-bg" style="flex: 1; height: 8px;"><div id="wing-r-fill" class="wear-bar-fill" style="width: 0%; background-color: var(--accent-green);"></div></div>
+                            <span id="wing-r-val" style="font-size: 0.85rem; font-weight: 700; min-width: 30px; text-align: right;">0%</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -185,17 +237,6 @@
                         </div>
                     </div>
                 </div>
-            </section>
-        </main>
-
-        <!-- Raw Data Inspector Tab -->
-        <main id="raw-tab" class="tab-content" style="display: none;">
-            <section class="panel">
-                <div style="display:flex; justify-content: space-between; align-items:center;">
-                    <h2>RAW DATA INSPECTOR</h2>
-                    <button onclick="document.getElementById('raw-terminal').innerHTML=''" style="padding: 5px 10px; background:var(--accent-red); color:#fff; border:none; border-radius:3px; cursor:pointer;">Clear</button>
-                </div>
-                <div id="raw-terminal" class="terminal-output"></div>
             </section>
         </main>
     </div>

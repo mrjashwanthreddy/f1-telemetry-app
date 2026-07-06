@@ -10,4 +10,7 @@ import java.util.List;
 public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord, Long> {
     List<TelemetryRecord> findBySessionIdOrderByTimestampAsc(String sessionId);
     List<TelemetryRecord> findBySessionIdAndCurrentLapNumOrderByTimestampAsc(String sessionId, int currentLapNum);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySessionId(String sessionId);
 }

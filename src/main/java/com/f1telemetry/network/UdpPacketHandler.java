@@ -27,19 +27,19 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     private final PacketParser packetParser;
     private final LiveSessionState liveSessionState;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.f1telemetry.service.EventBroadcastService eventBroadcastService;
     private final AtomicLong packetCount = new AtomicLong(0);
     private final java.util.concurrent.ConcurrentHashMap<Short, AtomicLong> typeCounters = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long LOG_INTERVAL = 60; // Log once every 60 packets per type
 
-    public UdpPacketHandler(PacketParser packetParser, 
-                            LiveSessionState liveSessionState, 
+    public UdpPacketHandler(PacketParser packetParser,
+                            LiveSessionState liveSessionState,
                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
-                            com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+                            com.f1telemetry.service.EventBroadcastService eventBroadcastService) {
         this.packetParser = packetParser;
         this.liveSessionState = liveSessionState;
         this.messagingTemplate = messagingTemplate;
-        this.objectMapper = objectMapper;
+        this.eventBroadcastService = eventBroadcastService;
     }
 
     @Override
@@ -52,12 +52,13 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
 
             liveSessionState.setLastUpdateTime(System.currentTimeMillis());
 
-            // Stream to the Raw Data Inspector tab in real-time
-            try {
-                String rawJson = objectMapper.writeValueAsString(parsedPacket);
-                messagingTemplate.convertAndSend("/topic/raw-packets", rawJson);
-            } catch (Exception ex) {
-                log.error("Failed to serialize raw packet", ex);
+            // Extract session UID from the packet header
+            PacketHeader header = getHeader(parsedPacket);
+            if (header != null && header.getSessionUID() != 0) {
+                String sessionUIDStr = String.valueOf(header.getSessionUID());
+                if (!sessionUIDStr.equals(liveSessionState.getSessionId())) {
+                    liveSessionState.setSessionId(sessionUIDStr);
+                }
             }
 
             // Update in-memory live state
@@ -79,6 +80,20 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 log.error("Error parsing packet #{}: {}", count, e.getMessage());
             }
         }
+    }
+
+    private PacketHeader getHeader(Object parsed) {
+        return switch (parsed) {
+            case PacketCarTelemetryData p -> p.getHeader();
+            case PacketLapData p -> p.getHeader();
+            case PacketCarStatusData p -> p.getHeader();
+            case PacketCarDamageData p -> p.getHeader();
+            case PacketSessionData p -> p.getHeader();
+            case PacketMotionData p -> p.getHeader();
+            case PacketEventData p -> p.getHeader();
+            case PacketParticipantsData p -> p.getHeader();
+            default -> null;
+        };
     }
 
     private short getPacketId(Object parsed) {
@@ -147,10 +162,13 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             }
             case PacketSessionData session -> {
                 liveSessionState.setTrackId(session.getTrackId());
+                liveSessionState.setSessionType(session.getSessionType());
                 liveSessionState.setWeather(session.getWeather());
                 liveSessionState.setTotalLaps(session.getTotalLaps());
                 liveSessionState.setSafetyCarStatus(session.getSafetyCarStatus());
             }
+            // Route event packets to EventBroadcastService for real-time UI notifications
+            case PacketEventData event -> eventBroadcastService.handleEvent(event);
             default -> {}
         }
     }

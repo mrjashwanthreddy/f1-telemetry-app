@@ -23,7 +23,6 @@ public class AsyncPersistenceService {
     
     // Unbounded queue for buffering frames. In production, might cap at 10,000 to prevent OOM
     private final LinkedBlockingQueue<TelemetryRecord> writeQueue = new LinkedBlockingQueue<>();
-    private String currentSessionId = "SESSION_1"; // Stubbed for demo
 
     private int frameCounter = 0;
 
@@ -42,7 +41,7 @@ public class AsyncPersistenceService {
         CarState playerCar = state.getCars()[playerIdx];
         
         TelemetryRecord record = new TelemetryRecord(
-            currentSessionId,
+            state.getSessionId(),
             playerCar.getCurrentLapNum(),
             System.currentTimeMillis(),
             playerCar.getSpeed(),

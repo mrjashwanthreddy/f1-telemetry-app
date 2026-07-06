@@ -21,15 +21,15 @@ async function handleAuth(event) {
     event.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    
+
     if (!username || !password) {
         showError("Username and password are required.");
         return;
     }
-    
+
     const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
     const payload = { username, password, role: 'ENGINEER' };
-    
+
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -38,13 +38,13 @@ async function handleAuth(event) {
             },
             body: JSON.stringify(payload)
         });
-        
+
         if (!response.ok) {
             const errorMsg = await response.text();
             showError(errorMsg || "Authentication failed.");
             return;
         }
-        
+
         if (isLoginMode) {
             const data = await response.json();
             if (data.token) {
@@ -71,12 +71,12 @@ async function handleAuth(event) {
 async function showDashboard() {
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
-    
+
     // We should trigger a connect if not already connected
     if (typeof connect === 'function') {
         connect();
     }
-    
+
     // Register this user as the Active Player for background UDP processing
     const token = localStorage.getItem('jwtToken');
     if (token) {
@@ -97,13 +97,13 @@ function logout() {
     localStorage.removeItem('jwtToken');
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
-    
+
     // Reset tabs so it doesn't get stuck on "Loading..." when logging back in
     if (typeof switchTab === 'function') {
         const liveBtn = document.querySelector('.tabs button');
         if (liveBtn) switchTab('live-tab', liveBtn);
     }
-    
+
     if (typeof disconnect === 'function') {
         disconnect();
     }
