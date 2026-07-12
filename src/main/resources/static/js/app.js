@@ -94,6 +94,19 @@ function connect() {
     });
 }
 
+function disconnect() {
+    if (stompClient !== null) {
+        try {
+            stompClient.disconnect();
+        } catch (e) {
+            console.error("Error during disconnect", e);
+        }
+        stompClient = null;
+    }
+    setConnected(false);
+    console.log("Disconnected");
+}
+
 function showToast(alertData) {
     const severity = (alertData.severity || 'warning').toLowerCase();
 
@@ -114,7 +127,8 @@ function showToast(alertData) {
         'FASTEST_LAP':    '🏆 Fastest Lap',
         'SPEED_TRAP':     '⚡ Speed Trap',
         'PENALTY':        '⚠️ Penalty',
-        'SESSION_START':  '🏁 Session',
+        'SESSION_START':  '🏁 Session Started',
+        'SESSION_END':    '🏁 Session Ended',
         'CHEQUERED_FLAG': '🏁 Race End',
         'RED_FLAG':       '🚩 Red Flag',
         'FLASHBACK':      '⏪ Flashback',
@@ -285,6 +299,17 @@ function updateDashboard(data) {
     elements.steerMarker.style.left = `${steerPos}%`;
     elements.steerVal.textContent = `${Math.round(playerCar.steer * 90)}°`;
 
+    // Rotate steering wheel HUD
+    const wheelHUD = document.getElementById('steering-wheel-hud');
+    if (wheelHUD) {
+        wheelHUD.style.transform = `rotate(${Math.round(playerCar.steer * 120)}deg)`;
+    }
+
+    // Push coordinates to the live rolling waveform
+    if (window.TelemetryChart) {
+        window.TelemetryChart.pushLiveWaveformPoint(playerCar.speed, playerCar.throttle, playerCar.brake);
+    }
+
     // 3. Update Race Status
     elements.lapNum.textContent = playerCar.currentLapNum;
     elements.position.textContent = `P${playerCar.position}`;
@@ -344,5 +369,10 @@ function updateDashboard(data) {
     elements.wingRVal.style.color = getDamageColor(wingR);
 }
 
-// Start connection when page loads
-window.onload = connect;
+// Start connection & waveform rendering loop when page loads
+window.onload = function() {
+    connect();
+    if (window.TelemetryChart) {
+        window.TelemetryChart.initLiveWaveform('liveWaveformCanvas');
+    }
+};

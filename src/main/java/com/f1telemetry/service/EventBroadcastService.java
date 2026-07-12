@@ -70,6 +70,14 @@ public class EventBroadcastService {
                 null
             );
 
+            case PacketEventData.SESSION_ENDED -> new AlertEvent(
+                "SESSION_END",
+                "🏁 Session Ended",
+                "INFO",
+                now,
+                null
+            );
+
             case PacketEventData.FASTEST_LAP -> {
                 // Only surface the notification (all cars can set fastest lap in race mode)
                 String lapTime = formatLapTime(d.getFastestLapTime());

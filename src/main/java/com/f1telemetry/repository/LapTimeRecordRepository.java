@@ -13,4 +13,7 @@ public interface LapTimeRecordRepository extends JpaRepository<LapTimeRecord, Lo
 
     @org.springframework.transaction.annotation.Transactional
     void deleteByRaceSession(RaceSession raceSession);
+
+    @org.springframework.data.jpa.repository.Query("SELECT MAX(l.lapNumber) FROM LapTimeRecord l WHERE l.raceSession = :raceSession")
+    Integer findMaxLapNumberByRaceSession(@org.springframework.data.repository.query.Param("raceSession") RaceSession raceSession);
 }

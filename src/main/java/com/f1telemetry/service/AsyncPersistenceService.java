@@ -40,9 +40,12 @@ public class AsyncPersistenceService {
         int playerIdx = state.getPlayerCarIndex();
         CarState playerCar = state.getCars()[playerIdx];
         
+        String dbSessionId = com.f1telemetry.engine.RuleEvaluationEngine.getDbSessionId(state);
+        int offsetLapNum = playerCar.getCurrentLapNum() + state.getLapOffset();
+
         TelemetryRecord record = new TelemetryRecord(
-            state.getSessionId(),
-            playerCar.getCurrentLapNum(),
+            dbSessionId,
+            offsetLapNum,
             System.currentTimeMillis(),
             playerCar.getSpeed(),
             playerCar.getThrottle(),

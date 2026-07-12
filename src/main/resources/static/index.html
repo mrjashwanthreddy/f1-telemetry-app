@@ -80,6 +80,12 @@
             <!-- Left Column: Pedals & Steering -->
             <section class="panel inputs-panel">
                 <h2>INPUTS</h2>
+                <div style="display:flex; justify-content:center; align-items:center; margin: 15px 0 25px 0; position:relative;">
+                    <div id="steering-wheel-hud" style="width: 100px; height: 100px; border-radius: 50%; border: 10px solid #1e293b; border-top: 10px solid var(--accent-blue); position: relative; transition: transform 0.05s linear; box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);">
+                        <div style="width:26px; height:26px; border-radius:50%; background:#0f172a; border:3px solid var(--accent-blue); position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:flex; justify-content:center; align-items:center; font-size:0.5rem; font-weight:700; color:#fff;">F1</div>
+                        <div style="position:absolute; top:50%; left:10px; right:10px; height:6px; background:#1e293b; transform:translateY(-50%);"></div>
+                    </div>
+                </div>
                 <div class="bars">
                     <div class="bar-container">
                         <div class="label">THR</div>
@@ -183,7 +189,7 @@
                 </div>
                 
                 <!-- Front Wing Damage visual section -->
-                <div class="wing-damage-container" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; gap: 8px;">
+                <div class="wing-damage-container" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; gap: 8px;">
                     <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase;">Front Wing Damage</div>
                     <div style="display: flex; justify-content: space-between; gap: 20px;">
                         <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
@@ -199,41 +205,61 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Bottom Panel: Live Telemetry Waveform -->
+            <section class="panel waveform-panel" style="grid-column: 1 / span 3; display: flex; flex-direction: column; min-height: 0; padding: 12px 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2>LIVE TELEMETRY WAVEFORM</h2>
+                    <div style="display:flex; gap:15px; font-size:0.8rem; font-weight:700;">
+                        <span style="color:#10b981;">● THROTTLE</span>
+                        <span style="color:#ff3366;">● BRAKE</span>
+                        <span style="color:#3b82f6;">● SPEED</span>
+                    </div>
+                </div>
+                <div style="flex:1; position:relative; background:#f8fafc; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.06);">
+                    <canvas id="liveWaveformCanvas" style="width:100%; height:100%; display:block;"></canvas>
+                </div>
+            </section>
         </main>
 
         <!-- Session History Tab -->
-        <main id="history-tab" class="tab-content" style="display: none;">
-            <section class="panel">
+        <main id="history-tab" class="tab-content" style="display: none; height: calc(100vh - 120px);">
+            <section class="panel" style="height: 100%; display: flex; flex-direction: column;">
                 <h2>SESSION HISTORY</h2>
-                <div style="display:flex; gap: 20px; margin-top: 15px;">
-                    <div style="flex: 1;">
+                <div style="display:flex; gap: 20px; margin-top: 15px; flex: 1; min-height: 0;">
+                    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                         <h3>Past Sessions</h3>
-                        <ul id="session-list" class="session-list">
+                        <ul id="session-list" class="session-list" style="flex: 1; overflow-y: auto; margin-top: 10px; max-height: none;">
                             <!-- Populated dynamically via history.js -->
                             <li>Loading...</li>
                         </ul>
                     </div>
-                    <div style="flex: 2;">
+                    <div style="flex: 2; display: flex; flex-direction: column; min-height: 0;">
                         <h3 id="lap-details-title">Select a session</h3>
-                        <table class="lap-table">
-                            <thead>
-                                <tr>
-                                    <th>Lap</th>
-                                    <th>Sector 1 (s)</th>
-                                    <th>Sector 2 (s)</th>
-                                    <th>Sector 3 (s)</th>
-                                    <th>Total (s)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lap-table-body">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
+                        <div style="flex: 1; min-height: 150px; overflow-y: auto; margin-bottom: 16px; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; margin-top: 10px;">
+                            <table class="lap-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:60px; text-align:center;">Compare</th>
+                                        <th>Lap</th>
+                                        <th>Sector 1 (s)</th>
+                                        <th>Sector 2 (s)</th>
+                                        <th>Sector 3 (s)</th>
+                                        <th>Total (s)</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lap-table-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
                         
-                        <div id="telemetry-chart-container" style="display: none; margin-top: 30px; background: rgba(25, 25, 30, 0.9); padding: 15px; border-radius: 8px;">
-                            <h3 id="telemetry-chart-title" style="margin-bottom: 10px;">Telemetry</h3>
-                            <canvas id="telemetryChart" height="100"></canvas>
+                        <div id="telemetry-chart-container" style="display: none; margin-top: 15px; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.08); flex-shrink: 0;">
+                            <h3 id="telemetry-chart-title" style="margin-bottom: 8px;">Telemetry</h3>
+                            <div style="position: relative; height: 200px; width: 100%;">
+                                <canvas id="telemetryChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -243,6 +269,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/telemetry-chart.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/history.js"></script>
