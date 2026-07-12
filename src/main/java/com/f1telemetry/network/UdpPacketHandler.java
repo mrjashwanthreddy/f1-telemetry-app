@@ -28,6 +28,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     private final LiveSessionState liveSessionState;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
     private final com.f1telemetry.service.EventBroadcastService eventBroadcastService;
+    private final com.f1telemetry.engine.RuleEvaluationEngine ruleEngine;
     private final AtomicLong packetCount = new AtomicLong(0);
     private final java.util.concurrent.ConcurrentHashMap<Short, AtomicLong> typeCounters = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long LOG_INTERVAL = 60; // Log once every 60 packets per type
@@ -35,11 +36,13 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     public UdpPacketHandler(PacketParser packetParser,
                             LiveSessionState liveSessionState,
                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
-                            com.f1telemetry.service.EventBroadcastService eventBroadcastService) {
+                            com.f1telemetry.service.EventBroadcastService eventBroadcastService,
+                            com.f1telemetry.engine.RuleEvaluationEngine ruleEngine) {
         this.packetParser = packetParser;
         this.liveSessionState = liveSessionState;
         this.messagingTemplate = messagingTemplate;
         this.eventBroadcastService = eventBroadcastService;
+        this.ruleEngine = ruleEngine;
     }
 
     @Override
@@ -166,9 +169,17 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 liveSessionState.setWeather(session.getWeather());
                 liveSessionState.setTotalLaps(session.getTotalLaps());
                 liveSessionState.setSafetyCarStatus(session.getSafetyCarStatus());
+                liveSessionState.setWeekendLinkIdentifier(session.getWeekendLinkIdentifier());
+                liveSessionState.setGameMode(session.getGameMode());
+                liveSessionState.setNetworkGame(session.getNetworkGame());
             }
             // Route event packets to EventBroadcastService for real-time UI notifications
-            case PacketEventData event -> eventBroadcastService.handleEvent(event);
+            case PacketEventData event -> {
+                eventBroadcastService.handleEvent(event);
+                if (PacketEventData.SESSION_ENDED.equals(event.getEventStringCode())) {
+                    ruleEngine.endSession();
+                }
+            }
             default -> {}
         }
     }

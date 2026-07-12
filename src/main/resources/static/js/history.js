@@ -108,7 +108,7 @@ async function deleteSession(sessionId) {
 async function loadLapDetails(sessionId, trackName) {
     document.getElementById('lap-details-title').textContent = `Laps for ${trackName}`;
     const tbody = document.getElementById('lap-table-body');
-    tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
     
     const token = localStorage.getItem('jwtToken');
 
@@ -128,8 +128,28 @@ async function loadLapDetails(sessionId, trackName) {
         tbody.innerHTML = '';
 
         if (laps.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">No laps completed yet for this session.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7">No laps completed yet for this session.</td></tr>';
             return;
+        }
+
+        // Extract unique, sorted lists of valid (>0) times for each column
+        const s1Times = [...new Set(laps.map(l => l.sector1TimeInMS).filter(t => t > 0))].sort((a, b) => a - b);
+        const s2Times = [...new Set(laps.map(l => l.sector2TimeInMS).filter(t => t > 0))].sort((a, b) => a - b);
+        const s3Times = [...new Set(laps.map(l => l.sector3TimeInMS).filter(t => t > 0))].sort((a, b) => a - b);
+        const totalTimes = [...new Set(laps.map(l => l.totalLapTimeInMS).filter(t => t > 0))].sort((a, b) => a - b);
+
+        function getHighlightStyle(time, sortedTimes) {
+            if (!time || time <= 0 || sortedTimes.length === 0) return "";
+            if (time === sortedTimes[0]) {
+                // Fastest: Purple
+                return "background-color: rgba(124, 58, 237, 0.12); color: #7c3aed; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-block;";
+            } else if (sortedTimes.length > 1 && time === sortedTimes[1]) {
+                // Second fastest: Green
+                return "background-color: rgba(21, 128, 61, 0.12); color: #15803d; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-block;";
+            } else {
+                // Remaining: Yellow
+                return "background-color: rgba(217, 119, 6, 0.12); color: #b45309; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-block;";
+            }
         }
 
         laps.forEach(lap => {
@@ -148,131 +168,96 @@ async function loadLapDetails(sessionId, trackName) {
                 totalFormatted = mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : secs;
             }
 
+            const s1Style = getHighlightStyle(lap.sector1TimeInMS, s1Times);
+            const s2Style = getHighlightStyle(lap.sector2TimeInMS, s2Times);
+            const s3Style = getHighlightStyle(lap.sector3TimeInMS, s3Times);
+            const totalStyle = getHighlightStyle(lap.totalLapTimeInMS, totalTimes);
+
+            const s1Span = s1Style ? `<span style="${s1Style}">${s1}</span>` : s1;
+            const s2Span = s2Style ? `<span style="${s2Style}">${s2}</span>` : s2;
+            const s3Span = s3Style ? `<span style="${s3Style}">${s3}</span>` : s3;
+            const totalSpan = totalStyle ? `<span style="${totalStyle}"><strong>${totalFormatted}</strong></span>` : `<strong>${totalFormatted}</strong>`;
+
             tr.innerHTML = `
+                <td style="text-align:center;">
+                    <input type="checkbox" class="lap-compare-checkbox" 
+                           data-session="${sessionId}" 
+                           data-lap="${lap.lapNumber}" 
+                           data-track="${lap.raceSession ? lap.raceSession.trackName : 'Track'}" 
+                           style="width: 16px; height: 16px; cursor: pointer;" 
+                           onchange="onLapCompareChange()"/>
+                </td>
                 <td>${lap.lapNumber}</td>
-                <td>${s1}</td>
-                <td>${s2}</td>
-                <td>${s3}</td>
-                <td><strong>${totalFormatted}</strong></td>
-                <td><button class="telemetry-btn" onclick="fetchTelemetry('${sessionId}', ${lap.lapNumber})">View Telemetry</button></td>
+                <td>${s1Span}</td>
+                <td>${s2Span}</td>
+                <td>${s3Span}</td>
+                <td>${totalSpan}</td>
+                <td><button class="telemetry-btn" onclick="viewSingleLap('${sessionId}', ${lap.lapNumber})">View Telemetry</button></td>
             `;
             tbody.appendChild(tr);
         });
     } catch (e) {
         console.error(e);
-        tbody.innerHTML = '<tr><td colspan="6">Error loading laps.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Error loading laps.</td></tr>';
     }
 }
 
-let telemetryChartInstance = null;
+function viewSingleLap(sessionId, lapNumber) {
+    const checkboxes = document.querySelectorAll('.lap-compare-checkbox');
+    checkboxes.forEach(cb => {
+        const isTarget = cb.getAttribute('data-session') === sessionId && parseInt(cb.getAttribute('data-lap')) === lapNumber;
+        cb.checked = isTarget;
+    });
+    onLapCompareChange();
+}
 
-async function fetchTelemetry(sessionId, lapNumber) {
+async function onLapCompareChange() {
+    const checkboxes = document.querySelectorAll('.lap-compare-checkbox:checked');
+    const chartContainer = document.getElementById('telemetry-chart-container');
+    
+    if (checkboxes.length === 0) {
+        chartContainer.style.display = 'none';
+        return;
+    }
+    
+    chartContainer.style.display = 'block';
+    
     const token = localStorage.getItem('jwtToken');
-    try {
+    const promises = Array.from(checkboxes).map(async (cb) => {
+        const sessionId = cb.getAttribute('data-session');
+        const lapNumber = parseInt(cb.getAttribute('data-lap'));
+        const trackName = cb.getAttribute('data-track');
+        
         const res = await fetch(`/api/history/sessions/${sessionId}/laps/${lapNumber}/telemetry`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error("Failed to load telemetry");
+        if (!res.ok) throw new Error(`Failed to load telemetry for Lap ${lapNumber}`);
+        const telemetry = await res.json();
         
-        const telemetryData = await res.json();
-        if (telemetryData.length === 0) {
-            alert("No telemetry data recorded for this lap.");
+        return {
+            lapNum: lapNumber,
+            trackName: trackName,
+            telemetry: telemetry
+        };
+    });
+    
+    try {
+        const lapsData = await Promise.all(promises);
+        
+        const validLaps = lapsData.filter(ld => ld.telemetry && ld.telemetry.length > 0);
+        if (validLaps.length === 0) {
+            document.getElementById('telemetry-chart-title').textContent = "No Telemetry Available";
             return;
         }
         
-        renderChart(telemetryData, lapNumber);
+        const lapLabels = validLaps.map(ld => `Lap ${ld.lapNum}`).join(' vs ');
+        document.getElementById('telemetry-chart-title').textContent = `Telemetry Comparison: ${lapLabels}`;
+        
+        if (window.TelemetryChart) {
+            window.TelemetryChart.renderComparisonChart('telemetryChart', validLaps);
+        }
     } catch (e) {
         console.error(e);
-        alert("Error loading telemetry.");
+        alert("Error loading comparison telemetry: " + e.message);
     }
-}
-
-function renderChart(data, lapNumber) {
-    document.getElementById('telemetry-chart-container').style.display = 'block';
-    document.getElementById('telemetry-chart-title').textContent = `Telemetry - Lap ${lapNumber}`;
-    
-    const ctx = document.getElementById('telemetryChart').getContext('2d');
-    
-    if (telemetryChartInstance) {
-        telemetryChartInstance.destroy();
-    }
-    
-    // Use relative time in seconds for the x-axis
-    const startTime = data[0].timestamp;
-    const labels = data.map(d => ((d.timestamp - startTime) / 1000).toFixed(1));
-    
-    const speedData = data.map(d => d.speed);
-    const throttleData = data.map(d => d.throttle * 100);
-    const brakeData = data.map(d => d.brake * 100);
-
-    telemetryChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Speed (km/h)',
-                    data: speedData,
-                    borderColor: '#ff0055',
-                    backgroundColor: 'rgba(255, 0, 85, 0.1)',
-                    yAxisID: 'ySpeed',
-                    tension: 0.1,
-                    pointRadius: 0
-                },
-                {
-                    label: 'Throttle (%)',
-                    data: throttleData,
-                    borderColor: '#00ff00',
-                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                    yAxisID: 'yInputs',
-                    tension: 0.1,
-                    pointRadius: 0
-                },
-                {
-                    label: 'Brake (%)',
-                    data: brakeData,
-                    borderColor: '#0088ff',
-                    backgroundColor: 'rgba(0, 136, 255, 0.1)',
-                    yAxisID: 'yInputs',
-                    tension: 0.1,
-                    pointRadius: 0
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            scales: {
-                x: {
-                    title: { display: true, text: 'Time (s)', color: '#fff' },
-                    ticks: { color: '#aaa', maxTicksLimit: 20 }
-                },
-                ySpeed: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: { display: true, text: 'Speed', color: '#ff0055' },
-                    ticks: { color: '#ff0055' },
-                    suggestedMin: 0,
-                    suggestedMax: 350
-                },
-                yInputs: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: { display: true, text: 'Inputs %', color: '#00ff00' },
-                    ticks: { color: '#aaa' },
-                    suggestedMin: 0,
-                    suggestedMax: 100,
-                    grid: { drawOnChartArea: false }
-                }
-            },
-            plugins: {
-                legend: { labels: { color: '#fff' } }
-            }
-        }
-    });
 }

@@ -88,22 +88,39 @@ public class RuleEvaluationEngine {
     private long lastTireAlertTime = 0;
     private short lastFrontLeftWingDamage = 0;
 
-    // Lap Tracking
+    // Session and Lap Tracking
+    private String currentDbSessionId = null;
+    private String currentGameSessionId = null;
     private short lastSeenLap = -1;
     private int cachedS1 = 0;
     private int cachedS2 = 0;
-    private String currentSessionId = null;
+    private int currentLapOffset = 0;
 
     public List<AlertEvent> evaluate(LiveSessionState state, UserPreference prefs) {
         List<AlertEvent> alerts = new ArrayList<>();
-        int playerIdx = state.getPlayerCarIndex();
-        CarState playerCar = state.getCars()[playerIdx];
         long now = System.currentTimeMillis();
 
-        // 1. Lap Completion Tracking
+        // 1. Inactivity detection: if no packets for 10s, auto-end the current tracking session
+        if (state.getLastUpdateTime() > 0 && (now - state.getLastUpdateTime() > 10000)) {
+            if (currentDbSessionId != null) {
+                log.info("Inactivity detected (10s). Resetting current session tracking.");
+                endSession();
+            }
+            return alerts;
+        }
+
+        // 2. Prevent creating dummy sessions if there is no active user OR no packets have been received yet
+        if (state.getSessionId() == null || activeUserService.getActiveUser() == null) {
+            return alerts;
+        }
+
+        int playerIdx = state.getPlayerCarIndex();
+        CarState playerCar = state.getCars()[playerIdx];
+
+        // 3. Lap Completion Tracking
         trackLaps(playerCar, state);
 
-        // 2. Rules Evaluation
+        // 4. Rules Evaluation
         if (prefs == null)
             return alerts;
 
@@ -147,33 +164,81 @@ public class RuleEvaluationEngine {
         }
 
         final com.f1telemetry.domain.User activeUser = rawUser;
+        String dbSessionId = getDbSessionId(state);
 
-        return sessionRepository.findBySessionId(currentSessionId).orElseGet(() -> {
+        return sessionRepository.findBySessionId(dbSessionId).orElseGet(() -> {
             String trackName = resolveTrackName(state.getTrackId());
-            String sessionType = resolveSessionType(state.getSessionType());
-            log.info("Creating session record in DB: [{}] — {} ({})", currentSessionId, trackName, sessionType);
-            RaceSession newSession = new RaceSession(activeUser, currentSessionId, trackName, sessionType, System.currentTimeMillis());
+            String sessionType = resolveSessionType(state);
+            log.info("Creating session record in DB: [{}] — {} ({})", dbSessionId, trackName, sessionType);
+            RaceSession newSession = new RaceSession(activeUser, dbSessionId, trackName, sessionType, System.currentTimeMillis());
             return sessionRepository.save(newSession);
         });
     }
 
     private void trackLaps(CarState playerCar, LiveSessionState state) {
+        String dbSessionId = getDbSessionId(state);
+        String gameSessionId = state.getSessionId();
+
         if (lastSeenLap == -1) {
             lastSeenLap = playerCar.getCurrentLapNum();
-            currentSessionId = state.getSessionId();
-            // Pre-create the session immediately so it shows up in history list right away!
-            createOrGetSession(state);
+            currentDbSessionId = dbSessionId;
+            currentGameSessionId = gameSessionId;
+            currentLapOffset = 0;
+            state.setLapOffset(currentLapOffset);
+
+            RaceSession session = createOrGetSession(state);
+            if (session != null) {
+                Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
+                if (maxLapNum != null) {
+                    currentLapOffset = maxLapNum;
+                    state.setLapOffset(currentLapOffset);
+                    log.info("Reused database session {}. Set lapOffset to {}.", dbSessionId, currentLapOffset);
+                }
+            }
             return;
         }
 
-        // Handle session ID changes dynamically
-        if (state.getSessionId() != null && !state.getSessionId().equals(currentSessionId)) {
-            currentSessionId = state.getSessionId();
+        // 1. Check if the database session ID changed (e.g. new weekend or starting a new TT session)
+        if (dbSessionId != null && !dbSessionId.equals(currentDbSessionId)) {
+            log.info("Database session changed from {} to {}. Starting new session.", currentDbSessionId, dbSessionId);
+            currentDbSessionId = dbSessionId;
+            currentGameSessionId = gameSessionId;
             lastSeenLap = playerCar.getCurrentLapNum();
             cachedS1 = 0;
             cachedS2 = 0;
-            // Pre-create the session immediately so it shows up in history list right away!
-            createOrGetSession(state);
+            currentLapOffset = 0;
+            state.setLapOffset(currentLapOffset);
+
+            RaceSession session = createOrGetSession(state);
+            if (session != null) {
+                Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
+                if (maxLapNum != null) {
+                    currentLapOffset = maxLapNum;
+                    state.setLapOffset(currentLapOffset);
+                    log.info("Reused database session {}. Set lapOffset to {}.", dbSessionId, currentLapOffset);
+                }
+            }
+            return;
+        }
+
+        // 2. Check if the game session ID changed within the SAME database session (e.g. Practice -> Qualifying in Career)
+        if (gameSessionId != null && !gameSessionId.equals(currentGameSessionId)) {
+            log.info("Game session changed from {} to {} within database session {}. Resetting lap tracking.", 
+                     currentGameSessionId, gameSessionId, currentDbSessionId);
+            currentGameSessionId = gameSessionId;
+            lastSeenLap = playerCar.getCurrentLapNum();
+            cachedS1 = 0;
+            cachedS2 = 0;
+
+            RaceSession session = createOrGetSession(state);
+            if (session != null) {
+                Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
+                if (maxLapNum != null) {
+                    currentLapOffset = maxLapNum;
+                    state.setLapOffset(currentLapOffset);
+                    log.info("Reused database session {}. Updated lapOffset to {}.", dbSessionId, currentLapOffset);
+                }
+            }
             return;
         }
 
@@ -185,8 +250,10 @@ public class RuleEvaluationEngine {
 
         // Lap incremented → previous lap is complete, persist it
         if (playerCar.getCurrentLapNum() > lastSeenLap && playerCar.getLastLapTimeInMS() > 0) {
-            log.info("Lap {} completed. Saving to database.", lastSeenLap);
-            saveLapRecord(lastSeenLap, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
+            int completedLapDbNum = lastSeenLap + currentLapOffset;
+            log.info("Lap {} (Game lap {}) completed in session {}. Saving to database as lap {}.", 
+                     lastSeenLap, lastSeenLap, currentDbSessionId, completedLapDbNum);
+            saveLapRecord((short) completedLapDbNum, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
 
             lastSeenLap = playerCar.getCurrentLapNum();
             cachedS1 = 0;
@@ -209,7 +276,25 @@ public class RuleEvaluationEngine {
         lapRepository.save(record);
     }
 
-    // ── Public lookup helpers (also usable by other services) ─────────────────
+    public void endSession() {
+        log.info("Session end triggered. Resetting tracking variables.");
+        this.currentDbSessionId = null;
+        this.currentGameSessionId = null;
+        this.lastSeenLap = -1;
+        this.currentLapOffset = 0;
+        this.cachedS1 = 0;
+        this.cachedS2 = 0;
+    }
+
+    // ── Public lookup helpers ─────────────────────────────────────────
+
+    public static String getDbSessionId(LiveSessionState state) {
+        if (state == null) return null;
+        if (state.getWeekendLinkIdentifier() != 0) {
+            return "weekend-" + state.getWeekendLinkIdentifier();
+        }
+        return state.getSessionId();
+    }
 
     /**
      * Resolves the human-readable circuit name from the F1 25 trackId byte.
@@ -223,7 +308,16 @@ public class RuleEvaluationEngine {
      * Resolves the session mode label from the F1 25 sessionType short.
      * Covers all modes: Practice, Qualifying, Race, Time Trial, Sprint, etc.
      */
-    public static String resolveSessionType(short sessionType) {
-        return SESSION_TYPES.getOrDefault((int) sessionType, "Unknown Session (ID " + sessionType + ")");
+    public static String resolveSessionType(LiveSessionState state) {
+        if (state.getWeekendLinkIdentifier() != 0) {
+            if (state.getGameMode() == 19 || state.getGameMode() == 20 || state.getGameMode() == 21 || state.getGameMode() == 22) {
+                return "Career Round";
+            } else if (state.getNetworkGame() == 1) {
+                return "Multiplayer Round";
+            } else {
+                return "Career/Multiplayer Round";
+            }
+        }
+        return SESSION_TYPES.getOrDefault((int) state.getSessionType(), "Unknown Session (ID " + state.getSessionType() + ")");
     }
 }
