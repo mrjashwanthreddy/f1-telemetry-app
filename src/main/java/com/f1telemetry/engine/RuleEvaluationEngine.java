@@ -24,6 +24,7 @@ public class RuleEvaluationEngine {
     private final LapTimeRecordRepository lapRepository;
     private final com.f1telemetry.service.ActiveUserService activeUserService;
     private final com.f1telemetry.repository.UserRepository userRepository;
+    private final com.f1telemetry.ai.AiLapAlertService aiLapAlertService;
 
     // ── F1 25 Track ID → Circuit Name ─────────────────────────────────────────
     // Source: F1 25 UDP Specification Appendix (trackId, int8)
@@ -86,6 +87,9 @@ public class RuleEvaluationEngine {
             Map.entry(18, "Time Trial"));
 
     private long lastTireAlertTime = 0;
+    private long lastBrakeAlertTime = 0;
+    private long lastFuelAlertTime = 0;
+    private long lastBatteryAlertTime = 0;
     private short lastFrontLeftWingDamage = 0;
 
     // Session and Lap Tracking
@@ -95,6 +99,11 @@ public class RuleEvaluationEngine {
     private int cachedS1 = 0;
     private int cachedS2 = 0;
     private int currentLapOffset = 0;
+
+    // Phase 10 Enhancement: Sector Delta Coaching
+    private short lastSeenSector = -1;
+    private int bestSector1TimeMs = Integer.MAX_VALUE;
+    private int bestSector2TimeMs = Integer.MAX_VALUE;
 
     public List<AlertEvent> evaluate(LiveSessionState state, UserPreference prefs) {
         List<AlertEvent> alerts = new ArrayList<>();
@@ -118,7 +127,7 @@ public class RuleEvaluationEngine {
         CarState playerCar = state.getCars()[playerIdx];
 
         // 3. Lap Completion Tracking
-        trackLaps(playerCar, state);
+        trackLaps(playerCar, state, alerts);
 
         // 4. Rules Evaluation
         if (prefs == null)
@@ -137,6 +146,45 @@ public class RuleEvaluationEngine {
                 alerts.add(new AlertEvent("TIRE_OVERHEAT", "Tire surface temperature exceeded threshold!", "WARNING",
                         now));
                 lastTireAlertTime = now;
+            }
+        }
+
+        if (now - lastBrakeAlertTime > 5000) {
+            boolean overheating = false;
+            int[] temps = playerCar.getBrakesTemperature();
+            if (temps != null) {
+                for (int i = 0; i < 4; i++) {
+                    if (temps[i] >= prefs.getBrakeOverheatTemp()) {
+                        overheating = true;
+                        break;
+                    }
+                }
+            }
+            if (overheating) {
+                alerts.add(new AlertEvent("BRAKE_OVERHEAT", "Brake temperature exceeded threshold!", "WARNING",
+                        now));
+                lastBrakeAlertTime = now;
+            }
+        }
+
+        if (now - lastFuelAlertTime > 30000) {
+            if (playerCar.getFuelInTank() > 0 && playerCar.getFuelInTank() < prefs.getCriticalFuelDelta()) {
+                alerts.add(new AlertEvent("LOW_FUEL", 
+                        String.format("Low fuel warning! %.1fL remaining", playerCar.getFuelInTank()), 
+                        "CRITICAL", 
+                        now));
+                lastFuelAlertTime = now;
+            }
+        }
+
+        if (now - lastBatteryAlertTime > 15000) {
+            float batteryPercent = (playerCar.getErsStoreEnergy() / 4000000.0f) * 100.0f;
+            if (playerCar.getErsStoreEnergy() > 0 && batteryPercent < prefs.getLowBatteryPercentage()) {
+                alerts.add(new AlertEvent("LOW_BATTERY", 
+                        String.format("Low battery warning! ERS at %.0f%%", batteryPercent), 
+                        "WARNING", 
+                        now));
+                lastBatteryAlertTime = now;
             }
         }
 
@@ -175,7 +223,32 @@ public class RuleEvaluationEngine {
         });
     }
 
-    private void trackLaps(CarState playerCar, LiveSessionState state) {
+    private void initializeBestSectorTimes(RaceSession session) {
+        if (session == null) {
+            bestSector1TimeMs = Integer.MAX_VALUE;
+            bestSector2TimeMs = Integer.MAX_VALUE;
+            return;
+        }
+        try {
+            List<LapTimeRecord> laps = lapRepository.findByRaceSessionOrderByLapNumberAsc(session);
+            bestSector1TimeMs = laps.stream()
+                .filter(l -> l.getSector1TimeInMS() > 0)
+                .mapToInt(LapTimeRecord::getSector1TimeInMS)
+                .min()
+                .orElse(Integer.MAX_VALUE);
+            bestSector2TimeMs = laps.stream()
+                .filter(l -> l.getSector2TimeInMS() > 0)
+                .mapToInt(LapTimeRecord::getSector2TimeInMS)
+                .min()
+                .orElse(Integer.MAX_VALUE);
+            log.info("Initialized best sectors for session {}: S1={}ms, S2={}ms", 
+                     session.getSessionId(), bestSector1TimeMs, bestSector2TimeMs);
+        } catch (Exception e) {
+            log.error("Error initializing best sector times", e);
+        }
+    }
+
+    private void trackLaps(CarState playerCar, LiveSessionState state, List<AlertEvent> alerts) {
         String dbSessionId = getDbSessionId(state);
         String gameSessionId = state.getSessionId();
 
@@ -188,6 +261,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
+                initializeBestSectorTimes(session);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -211,6 +285,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
+                initializeBestSectorTimes(session);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -232,6 +307,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
+                initializeBestSectorTimes(session);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -248,6 +324,15 @@ public class RuleEvaluationEngine {
         if (playerCar.getSector2TimeInMS() > 0)
             cachedS2 = playerCar.getSector2TimeInMS();
 
+        // Phase 10 Enhancement: Track sector transitions
+        short currentSector = playerCar.getSector();
+        if (lastSeenSector == -1) {
+            lastSeenSector = currentSector;
+        } else if (currentSector != lastSeenSector) {
+            handleSectorChange(lastSeenSector, currentSector, playerCar, state, alerts);
+            lastSeenSector = currentSector;
+        }
+
         // Lap incremented → previous lap is complete, persist it
         if (playerCar.getCurrentLapNum() > lastSeenLap && playerCar.getLastLapTimeInMS() > 0) {
             int completedLapDbNum = lastSeenLap + currentLapOffset;
@@ -255,10 +340,69 @@ public class RuleEvaluationEngine {
                      lastSeenLap, lastSeenLap, currentDbSessionId, completedLapDbNum);
             saveLapRecord((short) completedLapDbNum, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
 
+            // Phase 10: Fire AI lap alert async (non-blocking — never delays telemetry pipeline)
+            aiLapAlertService.fireLapAlertAsync(
+                completedLapDbNum, cachedS1, cachedS2,
+                (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2,
+                (int) playerCar.getLastLapTimeInMS(), state
+            );
+
+            // If the completed lap updated sector records, verify them
+            if (cachedS1 > 0 && cachedS1 < bestSector1TimeMs) bestSector1TimeMs = cachedS1;
+            if (cachedS2 > 0 && cachedS2 < bestSector2TimeMs) bestSector2TimeMs = cachedS2;
+
             lastSeenLap = playerCar.getCurrentLapNum();
             cachedS1 = 0;
             cachedS2 = 0;
         }
+    }
+
+    private void handleSectorChange(short oldSec, short newSec, CarState playerCar, LiveSessionState state, List<AlertEvent> alerts) {
+        // Sector 1 completes (crossed from 0 to 1)
+        if (oldSec == 0 && newSec == 1) {
+            int s1 = playerCar.getSector1TimeInMS();
+            if (s1 > 0) {
+                boolean isPB = s1 < bestSector1TimeMs;
+                int delta = (bestSector1TimeMs == Integer.MAX_VALUE) ? 0 : s1 - bestSector1TimeMs;
+                if (isPB) bestSector1TimeMs = s1;
+                alerts.add(new AlertEvent(
+                    "SECTOR_DELTA",
+                    buildSectorDeltaMessage(1, s1, delta, isPB),
+                    isPB ? "SUCCESS" : (delta <= 0 ? "INFO" : "WARNING"),
+                    System.currentTimeMillis()
+                ));
+            }
+        }
+        // Sector 2 completes (crossed from 1 to 2)
+        else if (oldSec == 1 && newSec == 2) {
+            int s2 = playerCar.getSector2TimeInMS();
+            if (s2 > 0) {
+                boolean isPB = s2 < bestSector2TimeMs;
+                int delta = (bestSector2TimeMs == Integer.MAX_VALUE) ? 0 : s2 - bestSector2TimeMs;
+                if (isPB) bestSector2TimeMs = s2;
+                alerts.add(new AlertEvent(
+                    "SECTOR_DELTA",
+                    buildSectorDeltaMessage(2, s2, delta, isPB),
+                    isPB ? "SUCCESS" : (delta <= 0 ? "INFO" : "WARNING"),
+                    System.currentTimeMillis()
+                ));
+            }
+        }
+    }
+
+    private String buildSectorDeltaMessage(int sectorNum, int sectorTimeMs, int deltaMs, boolean isPB) {
+        String timeStr = com.f1telemetry.ai.PromptBuilder.formatMs(sectorTimeMs);
+        if (isPB) {
+            if (deltaMs == 0) {
+                return String.format("Sector %d complete. Personal best time: %s.", sectorNum, timeStr);
+            }
+            return String.format("Sector %d purple! Personal best: %s. Improved by %.3f seconds.", 
+                                 sectorNum, timeStr, Math.abs(deltaMs) / 1000.0);
+        }
+        if (deltaMs <= 0) {
+            return String.format("Sector %d green: %s. Up by %.3f seconds.", sectorNum, timeStr, Math.abs(deltaMs) / 1000.0);
+        }
+        return String.format("Sector %d complete: %s. Plus %.3f seconds.", sectorNum, timeStr, deltaMs / 1000.0);
     }
 
     private void saveLapRecord(short lapNum, int s1, int s2, int totalLapTime, LiveSessionState state) {
@@ -269,10 +413,25 @@ public class RuleEvaluationEngine {
         }
 
         int s3 = totalLapTime - s1 - s2;
-        if (s3 < 0)
-            s3 = 0; // Sanity check for incomplete sector data
+        if (s3 < 0) s3 = 0; // Sanity check for incomplete sector data
 
-        LapTimeRecord record = new LapTimeRecord(session, lapNum, s1, s2, s3, totalLapTime);
+        // Phase 10: snapshot tyre wear and fuel at lap completion
+        int playerIdx = state.getPlayerCarIndex();
+        com.f1telemetry.state.CarState playerCar = state.getCars()[playerIdx];
+
+        float[] wear = playerCar.getTyreWear(); // [RL, RR, FL, FR]
+        float fuelKg = playerCar.getFuelInTank();
+        short tyreAge = playerCar.getTyresAgeLaps();
+        short compound = playerCar.getVisualTyreCompound();
+
+        LapTimeRecord record = new LapTimeRecord(
+            session, lapNum, s1, s2, s3, totalLapTime,
+            wear != null && wear.length == 4 ? wear[0] : 0f,  // RL
+            wear != null && wear.length == 4 ? wear[1] : 0f,  // RR
+            wear != null && wear.length == 4 ? wear[2] : 0f,  // FL
+            wear != null && wear.length == 4 ? wear[3] : 0f,  // FR
+            fuelKg, tyreAge, compound
+        );
         lapRepository.save(record);
     }
 
@@ -284,6 +443,14 @@ public class RuleEvaluationEngine {
         this.currentLapOffset = 0;
         this.cachedS1 = 0;
         this.cachedS2 = 0;
+        this.lastTireAlertTime = 0;
+        this.lastBrakeAlertTime = 0;
+        this.lastFuelAlertTime = 0;
+        this.lastBatteryAlertTime = 0;
+        this.lastFrontLeftWingDamage = 0;
+        this.lastSeenSector = -1;
+        this.bestSector1TimeMs = Integer.MAX_VALUE;
+        this.bestSector2TimeMs = Integer.MAX_VALUE;
     }
 
     // ── Public lookup helpers ─────────────────────────────────────────

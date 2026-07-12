@@ -50,7 +50,10 @@ public class AsyncPersistenceService {
             playerCar.getSpeed(),
             playerCar.getThrottle(),
             playerCar.getBrake(),
-            playerCar.getEngineRPM()
+            playerCar.getEngineRPM(),
+            playerCar.getLapDistance(),    // Phase 10: corner zone detection
+            playerCar.getSteer(),          // Phase 10: steering input
+            playerCar.getGForceLateral()   // Phase 10: lateral G-force
         );
         
         writeQueue.offer(record);

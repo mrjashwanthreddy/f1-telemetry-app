@@ -23,7 +23,14 @@ public class TelemetryRecord {
     private float brake;
     private int engineRPM;
 
-    public TelemetryRecord(String sessionId, int currentLapNum, long timestamp, int speed, float throttle, float brake, int engineRPM) {
+    // Phase 10: Corner zone analysis fields
+    private float lapDistance;   // metres into current lap — key for corner zone detection
+    private float steer;         // steering input (-1.0 left to +1.0 right)
+    private float gForceLateral; // lateral G-force — identifies actual cornering load
+
+    public TelemetryRecord(String sessionId, int currentLapNum, long timestamp,
+                           int speed, float throttle, float brake, int engineRPM,
+                           float lapDistance, float steer, float gForceLateral) {
         this.sessionId = sessionId;
         this.currentLapNum = currentLapNum;
         this.timestamp = timestamp;
@@ -31,5 +38,8 @@ public class TelemetryRecord {
         this.throttle = throttle;
         this.brake = brake;
         this.engineRPM = engineRPM;
+        this.lapDistance = lapDistance;
+        this.steer = steer;
+        this.gForceLateral = gForceLateral;
     }
 }

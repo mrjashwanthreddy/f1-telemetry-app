@@ -23,6 +23,18 @@ public class UserPreference {
     private float criticalFuelDelta = 0.5f;
     private float lowBatteryPercentage = 10.0f;
 
+    // Phase 10: Customizable voice query hotkey (default Scroll Lock = keycode 70)
+    private Integer voiceHotkey = 70;
+    private String voiceHotkeyLabel = "Scroll Lock";
+
+    public int getVoiceHotkey() {
+        return voiceHotkey != null ? voiceHotkey : 70;
+    }
+
+    public String getVoiceHotkeyLabel() {
+        return voiceHotkeyLabel != null ? voiceHotkeyLabel : "Scroll Lock";
+    }
+
     public UserPreference(User user) {
         this.user = user;
     }

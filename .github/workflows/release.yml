@@ -54,7 +54,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || 'Manual Build (latest)' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'F1Telemetry-windows-latest' }}
           files: target/dist/F1Telemetry-Windows.zip
           draft: false
           prerelease: false
