@@ -1,9 +1,13 @@
-# F1 Telemetry Processing System
+# F1 Race Engineer - Real-Time Ingestion & Analytics Dashboard
+
 ![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.1-green?style=flat-square&logo=spring)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=flat-square&logo=postgresql)
+![Gemini AI](https://img.shields.io/badge/Gemini-2.0%20Flash-blueviolet?style=flat-square&logo=google)
 
-This Spring Boot application is a high-performance, real-time telemetry processing dashboard for F1 Codemasters games (F1 23/24/25). It ingests high-frequency UDP telemetry streams, processes them with ultra-low latency, and broadcasts updates to a unified web dashboard for live monitoring and post-race analytics.
+A high-performance, real-time telemetry processing application and interactive secondary-screen dashboard designed for Codemasters' F1 games (F1 23/24/25). The system listens for high-frequency UDP game streams, decodes C-struct binary buffers with ultra-low latency, evaluates metric thresholds, and streams live telemetry data to a modern Single Page Application (SPA) dashboard. 
+
+Additionally, it integrates Google's **Gemini 2.0 Flash API** acting as a dynamic, voice-enabled **AI Race Engineer** that performs corner-by-corner physics analysis, triggers live TTS alerts, compiles post-session debriefs, and intercepts OS-level hotkeys for fullscreen voice Q&A.
 
 ---
 
@@ -17,29 +21,47 @@ This Spring Boot application is a high-performance, real-time telemetry processi
 
 ---
 
-## 🚀 Features
+## 📦 Quick Start (Standalone Release)
 
-* **High-Speed UDP Ingestion**: Utilizes Netty asynchronous event loops to listen on UDP port `20777` and unpack incoming binary structs in real-time.
-* **Low Allocation / Zero GC Pause**: Features efficient little-endian binary decoding to prevent GC-induced latency spikes in high-frequency streams (60Hz).
-* **Live WebSockets Streaming**: Decouples UDP throughput by broadcasting live stats to a Web client at 30Hz using SockJS / STOMP.
-* **Rule-Based Live Alerts**: Automatically evaluates metric thresholds (e.g. tire overheating, front wing damage) and pushes warning events to the driver.
-* **Asynchronous Persistence & Downsampling**: Buffers telemetry metrics in a queue and downsamples them to 10Hz before batch-inserting into PostgreSQL to save disk space.
-* **Single Page Application (SPA)**: Clean tabbed dashboard (Live Dashboard, Completed Lap History, Interactive Telemetry Analytics, and Raw Packet Debugger).
-* **Interactive Chart.js Analytics**: Renders post-race graphs mapping Speed, RPM, Throttle, and Brake traces sequence over a completed lap.
-* **GraalVM & Custom JRE Executables**: Bundled script using `jlink` and `jpackage` to package the Spring Boot app into a standalone Windows `F1Telemetry.exe`.
+No developer setup is required! You do not need to install Java, Maven, Docker, or PostgreSQL to use the dashboard:
+
+1. Head to the **Releases** page of this GitHub repository.
+2. Download the latest **`F1Telemetry-Windows.zip`** release archive.
+3. Extract the ZIP folder to a local directory on your PC.
+4. Double-click **`F1Telemetry.exe`** to start the application (a console window will display the Spring Boot logs).
+5. Open your web browser and go to `http://localhost:8080` to access the Live Race Engineer Dashboard!
+
+*Note: The standalone release is pre-configured with a secure cloud-hosted database fallback, allowing 100% plug-and-play execution.*
 
 ---
 
-## 🛠️ Prerequisites
+## 🚀 Key Features
 
-* **Java 21**
+* **High-Speed UDP Ingestion (Netty)**: Utilizes Netty asynchronous event loops to listen on UDP port `20777` and decode binary C-struct packets in real-time at 60Hz.
+* **Low Allocation / Zero GC Pause**: Highly optimized decoding paths using direct buffer offsets to eliminate short-lived objects, avoiding GC-induced latency spikes in high-frequency streams.
+* **Live Standings & Track Progress Timeline**: Replaces basic waveform graphs with a live racing HUD:
+  * **Track Timeline Map:** A horizontal track visualization showing the relative spacing of all 22 cars in real-time. Highlights the player's position with a glowing pulse animation.
+  * **Race Standings Table:** Sleek, high-density table displaying position, driver number, lap, speed, visual tyre compound (color-coded badges), average tyre wear, and real-time front left/right wing damage.
+* **AI Race Engineer & Corner Analysis**:
+  * **Live TTS Radio Alerts:** Real-time verbal notifications (e.g. tire overheating warnings) delivered via Web Speech API in a professional British voice.
+  * **Fullscreen Voice Interceptor:** Intercepts global hotkeys (`Scroll Lock` by default) at the OS level during fullscreen gameplay to trigger voice queries and chats with your engineer.
+  * **Lap & Session Debriefs:** Generates corner-by-corner apex speed evaluations, consistency ratings, tyre degradation reviews, and lap delta analysis.
+* **Interactive Chart.js Post-Race Analytics**: Visualizes historical lap data with multi-axis graphs comparing Speed, RPM, Throttle, and Brake traces.
+* **Zoom-Proof & Responsive Layout**: Responsive media queries and auto-shrink height boundaries adapt to any browser zoom settings or secondary screen sizes. If the window height is constrained, columns stack vertically and scroll internally without clipping.
+* **Secure Key Injection CI/CD Pipeline:** The GitHub Actions release workflow automatically bakes in your Action secrets (`GEMINI_KEY`) at packaging compile-time, keeping keys hidden from the public repository history.
+
+---
+
+## 🛠️ Prerequisites (For Developers)
+
+* **Java 21 (LTS)**
 * **Maven** (configured via wrapper)
-* **Docker Desktop**
-* **Codemasters F1 Game** (or use the mock UDP python sender script)
+* **Docker Desktop** (for local PostgreSQL instance)
+* **Codemasters F1 Game** (or use the mock UDP sender script)
 
 ---
 
-## ⚙️ Installation & Setup
+## ⚙️ Installation & Setup (For Developers)
 
 1. **Clone the repository**
    ```bash
@@ -47,19 +69,26 @@ This Spring Boot application is a high-performance, real-time telemetry processi
    cd f1-telemetry
    ```
 
-2. **Start the database container**
-   Boot up the local PostgreSQL database instance using Docker:
+2. **Start the local database container**
+   Boot up the PostgreSQL instance using Docker Compose:
    ```bash
    cd f1-telemetry-app
    docker-compose up -d
    ```
 
 3. **Verify Configuration**
-   Check settings in `f1-telemetry-app/src/main/resources/application.properties`. Ensure JDBC datasource connections match your Postgres compose credentials:
+   Check local preferences in `f1-telemetry-app/src/main/resources/application.properties`. Ensure JDBC configurations match your database profile (do not commit production credentials to source control):
    ```properties
    spring.datasource.url=jdbc:postgresql://localhost:5432/f1telemetry
-   spring.datasource.username=f1user
-   spring.datasource.password=f1pass
+   spring.datasource.username=your_username
+   spring.datasource.password=your_password
+   spring.datasource.driver-class-name=org.postgresql.Driver
+   ```
+
+4. **Environment Variables**
+   Create a `.env` file in the project directory for local Gemini AI features:
+   ```env
+   GEMINI_KEY=your_gemini_api_key_here
    ```
 
 ---
@@ -80,7 +109,7 @@ python test_udp_sender.py realistic
 ```
 
 ### Packaging a Standalone Executable
-Build and bundle a standalone Windows executable (`F1Telemetry.exe`) using the automated packaging pipeline:
+Build and bundle the custom minimal JRE and standalone Windows executable (`F1Telemetry.exe`) using the packaging pipeline:
 ```bash
 package-app.bat
 ```
