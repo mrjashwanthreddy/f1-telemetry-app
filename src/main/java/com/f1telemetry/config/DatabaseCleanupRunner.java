@@ -15,12 +15,14 @@ public class DatabaseCleanupRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        log.info("Starting database cleanup of empty/invalid telemetry records...");
-        try {
-            int deletedCount = telemetryRecordRepository.deleteEmptyOrInvalidRecords();
-            log.info("Database cleanup completed successfully. Cleaned up {} empty/invalid telemetry records.", deletedCount);
-        } catch (Exception e) {
-            log.error("Failed to run database cleanup on startup", e);
-        }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            log.info("Starting database cleanup of empty/invalid telemetry records...");
+            try {
+                int deletedCount = telemetryRecordRepository.deleteEmptyOrInvalidRecords();
+                log.info("Database cleanup completed successfully. Cleaned up {} empty/invalid telemetry records.", deletedCount);
+            } catch (Exception e) {
+                log.error("Failed to run database cleanup on startup", e);
+            }
+        });
     }
 }

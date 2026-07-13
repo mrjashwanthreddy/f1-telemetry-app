@@ -38,6 +38,18 @@ public class UserPreference {
         this.aiEnabled = aiEnabled;
     }
 
+    // UDP ingestion configurations
+    private String udpHost = "127.0.0.1";
+    private Integer udpPort = 20777;
+
+    public String getUdpHost() {
+        return udpHost != null && !udpHost.isBlank() ? udpHost : "127.0.0.1";
+    }
+
+    public int getUdpPort() {
+        return udpPort != null ? udpPort : 20777;
+    }
+
     public int getVoiceHotkey() {
         return voiceHotkey != null ? voiceHotkey : 70;
     }

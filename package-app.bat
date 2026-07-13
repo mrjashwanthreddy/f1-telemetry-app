@@ -12,7 +12,7 @@ if exist "target\input" rd /s /q "target\input"
 echo ==============================================
 echo 2. Generating minimal custom JRE (jlink)...
 echo ==============================================
-jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki --output target\custom-runtime
+jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.jsobject --output target\custom-runtime
 if %ERRORLEVEL% neq 0 (
     echo ERROR: jlink failed!
     exit /b %ERRORLEVEL%
@@ -27,7 +27,7 @@ copy target\f1-telemetry-0.0.1-SNAPSHOT.jar target\input\f1-telemetry-0.0.1-SNAP
 echo ==============================================
 echo 4. Packaging into standalone EXE (jpackage)...
 echo ==============================================
-jpackage --type app-image --dest target\dist_new --name F1Telemetry --input target\input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target\custom-runtime --win-console
+jpackage --type app-image --dest target\dist_new --name F1Telemetry --input target\input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target\custom-runtime --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" --icon logo.ico
 if %ERRORLEVEL% neq 0 (
     echo ERROR: jpackage failed!
     exit /b %ERRORLEVEL%
@@ -35,4 +35,7 @@ if %ERRORLEVEL% neq 0 (
 
 echo ==============================================
 echo SUCCESS! standalone app created in target\dist_new\F1Telemetry
+echo ==============================================
+echo NOTE: On first launch, JCEF will download Chromium
+echo       binaries (~250MB) to %USERPROFILE%\.f1telemetry\jcef
 echo ==============================================

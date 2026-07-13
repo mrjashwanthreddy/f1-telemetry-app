@@ -353,54 +353,80 @@
         </main>
 
         <!-- Engineer Settings Tab -->
-        <main id="settings-tab" class="tab-content" style="display: none; height: calc(100vh - 120px);">
+        <main id="settings-tab" class="tab-content" style="display: none; height: calc(100vh - 120px); padding: 16px;">
             <section class="panel"
-                style="height: 100%; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; padding: 24px 32px; overflow-y: auto;">
-                <h2>ENGINEER SETTINGS</h2>
-                <p style="color: var(--text-dim); margin-top: 5px; margin-bottom: 25px;">Configure personalized
-                    thresholds for real-time telemetry alerts.</p>
+                style="height: 100%; display: flex; flex-direction: column; width: 100%; padding: 24px 32px; box-sizing: border-box; overflow-y: auto;">
+                <div>
+                    <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin: 0;">ENGINEER SETTINGS</h2>
+                    <p style="color: var(--text-dim); margin-top: 5px; margin-bottom: 25px;">Configure personalized thresholds and connectivity preferences.</p>
+                </div>
 
                 <form id="settings-form" onsubmit="savePreferences(event)"
-                    style="display: flex; flex-direction: column; gap: 20px;">
-                    <div class="input-group" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
-                        <label for="pref-ai-enabled" style="margin-bottom: 0; cursor: pointer;">Enable AI Race Engineer Features</label>
-                        <input type="checkbox" id="pref-ai-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent-blue);">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="pref-tire-temp">Tire Overheat Threshold (°C)</label>
-                        <input type="number" id="pref-tire-temp" step="1" min="50" max="150" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="pref-brake-temp">Brake Overheat Threshold (°C)</label>
-                        <input type="number" id="pref-brake-temp" step="1" min="100" max="1500" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="pref-fuel-level">Low Fuel Alert Level (Liters)</label>
-                        <input type="number" id="pref-fuel-level" step="0.1" min="0.1" max="50" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="pref-ers-battery">Low ERS Battery Warning Threshold (%)</label>
-                        <input type="number" id="pref-ers-battery" step="1" min="1" max="100" required>
-                    </div>
-
-                    <div id="settings-hotkey-group" class="input-group" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
-                        <label>Race Engineer Voice Hotkey (OS-Level)</label>
-                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
-                            <span id="hotkey-display"
-                                style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.1); color: #020000; min-width: 100px; text-align: center;">Scroll
-                                Lock</span>
-                            <button type="button" id="btn-bind-hotkey" class="btn-ai-debrief"
-                                onclick="startHotkeyBinding()"
-                                style="margin: 0; padding: 9px 16px; font-size: 0.85rem;">Change Hotkey</button>
+                    style="display: flex; flex-direction: column; gap: 24px; flex: 1;">
+                    
+                    <!-- Grid Container for two columns -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                        
+                        <!-- Column 1: Telemetry Thresholds Card -->
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+                            <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.1rem; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; font-weight: 700;">🚨 TELEMETRY ALERTS</h3>
+                            
+                            <div class="input-group">
+                                <label for="pref-tire-temp">Tire Overheat Threshold (°C)</label>
+                                <input type="number" id="pref-tire-temp" step="1" min="50" max="150" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="pref-brake-temp">Brake Overheat Threshold (°C)</label>
+                                <input type="number" id="pref-brake-temp" step="1" min="100" max="1500" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="pref-fuel-level">Low Fuel Alert Level (Liters)</label>
+                                <input type="number" id="pref-fuel-level" step="0.1" min="0.1" max="50" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="pref-ers-battery">Low ERS Battery Warning Threshold (%)</label>
+                                <input type="number" id="pref-ers-battery" step="1" min="1" max="100" required>
+                            </div>
                         </div>
-                        <small style="color: var(--text-dim); display: block; margin-top: 6px;">Press Scroll Lock or
-                            your bound key in-game to trigger voice queries.</small>
+
+                        <!-- Column 2: Connectivity & Controls Card -->
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+                            <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.1rem; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; font-weight: 700;">🌐 CONNECTIVITY & AI</h3>
+                            
+                            <div class="input-group" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
+                                <label for="pref-ai-enabled" style="margin-bottom: 0; cursor: pointer; font-weight: 600;">Enable AI Race Engineer Features</label>
+                                <input type="checkbox" id="pref-ai-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent-blue);">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="pref-udp-host">UDP Telemetry Ingestion Host</label>
+                                <input type="text" id="pref-udp-host" placeholder="127.0.0.1" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="pref-udp-port">UDP Telemetry Ingestion Port</label>
+                                <input type="number" id="pref-udp-port" step="1" min="1024" max="65535" placeholder="20777" required>
+                            </div>
+
+                            <div id="settings-hotkey-group" class="input-group" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                                <label>Race Engineer Voice Hotkey (OS-Level)</label>
+                                <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
+                                    <span id="hotkey-display"
+                                        style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); min-width: 100px; text-align: center;">Scroll
+                                        Lock</span>
+                                    <button type="button" id="btn-bind-hotkey" class="btn-ai-debrief"
+                                        onclick="startHotkeyBinding()"
+                                        style="margin: 0; padding: 9px 16px; font-size: 0.85rem;">Change Hotkey</button>
+                                </div>
+                                <small style="color: var(--text-dim); display: block; margin-top: 6px;">Press Scroll Lock or your bound key in-game to trigger voice queries.</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <button type="submit" class="telemetry-btn"
-                        style="margin-top: 10px; padding: 14px; font-size: 1rem; border-radius: 10px;">SAVE
-                        PREFERENCES</button>
+                    <!-- Save Button row aligned to the right -->
+                    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                        <button type="submit" class="telemetry-btn"
+                            style="width: 260px; padding: 14px; font-size: 1rem; border-radius: 10px; margin: 0;">SAVE PREFERENCES</button>
+                    </div>
                 </form>
             </section>
         </main>

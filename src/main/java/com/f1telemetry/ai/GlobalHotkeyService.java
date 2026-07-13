@@ -50,18 +50,20 @@ public class GlobalHotkeyService implements NativeKeyListener {
 
     @PostConstruct
     public void registerHook() {
-        try {
-            // Suppress JNativeHook's verbose logging
-            Logger nativeLogger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-            nativeLogger.setLevel(Level.WARNING);
-            nativeLogger.setUseParentHandlers(false);
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                // Suppress JNativeHook's verbose logging
+                Logger nativeLogger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+                nativeLogger.setLevel(Level.WARNING);
+                nativeLogger.setUseParentHandlers(false);
 
-            GlobalScreen.registerNativeHook();
-            GlobalScreen.addNativeKeyListener(this);
-            log.info("[GlobalHotkey] Registered successfully.");
-        } catch (NativeHookException e) {
-            log.warn("[GlobalHotkey] Could not register native hook: {}. Voice hotkey will be unavailable.", e.getMessage());
-        }
+                GlobalScreen.registerNativeHook();
+                GlobalScreen.addNativeKeyListener(this);
+                log.info("[GlobalHotkey] Registered successfully.");
+            } catch (NativeHookException e) {
+                log.warn("[GlobalHotkey] Could not register native hook: {}. Voice hotkey will be unavailable.", e.getMessage());
+            }
+        });
     }
 
     @PreDestroy

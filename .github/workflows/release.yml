@@ -37,7 +37,7 @@ jobs:
       - name: Generate Custom JRE (jlink)
         shell: pwsh
         run: |
-          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki --output target/custom-runtime
+          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.jsobject --output target/custom-runtime
 
       - name: Stage Packaging Input
         shell: pwsh
@@ -48,7 +48,7 @@ jobs:
       - name: Package Standalone EXE (jpackage)
         shell: pwsh
         run: |
-          jpackage --type app-image --dest target/dist --name F1Telemetry --input target/input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target/custom-runtime --win-console
+          jpackage --type app-image --dest target/dist --name F1Telemetry --input target/input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target/custom-runtime --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" --icon logo.ico
 
       - name: Compress Release Artifacts (Zip)
         shell: pwsh
@@ -65,4 +65,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

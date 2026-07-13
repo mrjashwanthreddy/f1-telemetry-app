@@ -57,14 +57,36 @@ public class UdpServer {
         }
     }
 
+    public synchronized void restart(String newHost, int newPort) {
+        if (newHost.equals(this.host) && newPort == this.port && channel != null && channel.isActive()) {
+            log.info("UDP server is already running on {}:{}", newHost, newPort);
+            return;
+        }
+        log.info("Restarting UDP server. Switching target from {}:{} to {}:{}...", this.host, this.port, newHost, newPort);
+        stop();
+        this.host = newHost;
+        this.port = newPort;
+        start();
+    }
+
     @PreDestroy
-    public void stop() {
+    public synchronized void stop() {
         log.info("Shutting down UDP server...");
         if (channel != null) {
-            channel.close();
+            try {
+                channel.close().sync();
+            } catch (Exception e) {
+                log.warn("Error closing UDP channel: {}", e.getMessage());
+            }
+            channel = null;
         }
         if (group != null) {
-            group.shutdownGracefully();
+            try {
+                group.shutdownGracefully().sync();
+            } catch (Exception e) {
+                log.warn("Error shutting down UDP EventLoopGroup: {}", e.getMessage());
+            }
+            group = null;
         }
         log.info("UDP server stopped.");
     }

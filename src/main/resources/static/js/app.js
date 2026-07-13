@@ -525,6 +525,8 @@ function loadPreferences() {
         const brakeField = document.getElementById('pref-brake-temp');
         const fuelField = document.getElementById('pref-fuel-level');
         const batteryField = document.getElementById('pref-ers-battery');
+        const udpHostField = document.getElementById('pref-udp-host');
+        const udpPortField = document.getElementById('pref-udp-port');
         const hotkeyDisplay = document.getElementById('hotkey-display');
         const aiToggle = document.getElementById('pref-ai-enabled');
 
@@ -532,6 +534,8 @@ function loadPreferences() {
         if (brakeField) brakeField.value = Math.round(data.brakeOverheatTemp);
         if (fuelField) fuelField.value = data.criticalFuelDelta;
         if (batteryField) batteryField.value = Math.round(data.lowBatteryPercentage);
+        if (udpHostField) udpHostField.value = data.udpHost || "127.0.0.1";
+        if (udpPortField) udpPortField.value = data.udpPort || 20777;
         if (data.voiceHotkey !== undefined && data.voiceHotkey !== null) {
             currentVoiceHotkey = data.voiceHotkey;
         }
@@ -567,6 +571,8 @@ function savePreferences(event) {
         brakeOverheatTemp: parseFloat(document.getElementById('pref-brake-temp').value),
         criticalFuelDelta: parseFloat(document.getElementById('pref-fuel-level').value),
         lowBatteryPercentage: parseFloat(document.getElementById('pref-ers-battery').value),
+        udpHost: document.getElementById('pref-udp-host').value,
+        udpPort: parseInt(document.getElementById('pref-udp-port').value, 10),
         voiceHotkey: currentVoiceHotkey,
         voiceHotkeyLabel: currentVoiceHotkeyLabel,
         aiEnabled: document.getElementById('pref-ai-enabled').checked
