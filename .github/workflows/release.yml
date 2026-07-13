@@ -25,6 +25,11 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Inject Gemini API Key
+        shell: pwsh
+        run: |
+          (Get-Content src/main/resources/application.properties) -replace 'gemini.api.key=.*', 'gemini.api.key=${{ secrets.GEMINI_KEY }}' | Set-Content src/main/resources/application.properties
+
       - name: Build Fat Spring Boot JAR
         run: |
           mvn clean package -DskipTests
