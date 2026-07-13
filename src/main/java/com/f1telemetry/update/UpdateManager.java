@@ -231,14 +231,14 @@ public class UpdateManager {
                     System.exit(0);
                 });
 
-            } catch (Exception e) {
-                log.error("Update failed: {}", e.getMessage(), e);
+            } catch (Throwable t) {
+                log.error("Update failed: {}", t.getMessage(), t);
                 if (zipFile != null && zipFile.exists()) zipFile.delete();
                 SwingUtilities.invokeLater(() -> {
                     progressDialog.dispose();
                     JOptionPane.showMessageDialog(
                             null,
-                            "Update failed: " + e.getMessage(),
+                            "Update failed: " + t.getMessage(),
                             "Update Error",
                             JOptionPane.ERROR_MESSAGE
                     );
@@ -261,6 +261,12 @@ public class UpdateManager {
                 }
                 
                 if (entryName.isEmpty()) {
+                    zis.closeEntry();
+                    continue;
+                }
+
+                // Skip extracting the JRE runtime directory to prevent locked JVM file errors (like jvm.dll)
+                if (entryName.startsWith("runtime/") || entryName.startsWith("runtime\\")) {
                     zis.closeEntry();
                     continue;
                 }
