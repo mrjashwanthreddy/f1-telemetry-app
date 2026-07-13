@@ -17,9 +17,16 @@ public class CarState {
     private float throttle;
     private float brake;
     private float steer;
+
+    // Phase 10: Motion / position data for corner zone analysis
+    private float lapDistance;    // metres into current lap (from LapData)
+    private float gForceLateral;  // lateral G-force (from CarMotionData)
     
     // Tire Temps (Surface)
     private short[] tyreSurfaceTemps = new short[4]; // RL, RR, FL, FR
+    
+    // Brake Temps
+    private int[] brakesTemperature = new int[4]; // RL, RR, FL, FR
     
     // Lap Data
     private short position;
@@ -34,6 +41,7 @@ public class CarState {
     private float fuelInTank;
     private float ersStoreEnergy;
     private short visualTyreCompound;
+    private short tyresAgeLaps;        // Phase 10: laps on current tyre set
     
     // Damage
     private float[] tyreWear = new float[4];

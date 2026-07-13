@@ -127,6 +127,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     state.setBrake(ct.getBrake());
                     state.setSteer(ct.getSteer());
                     System.arraycopy(ct.getTyresSurfaceTemperature(), 0, state.getTyreSurfaceTemps(), 0, 4);
+                    System.arraycopy(ct.getBrakesTemperature(), 0, state.getBrakesTemperature(), 0, 4);
                 }
             }
             case PacketLapData lapData -> {
@@ -141,6 +142,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     carState.setCurrentLapTimeInMS(lap.getCurrentLapTimeInMS());
                     carState.setSector1TimeInMS(lap.getSector1TimeMinutesPart() * 60000 + lap.getSector1TimeMSPart());
                     carState.setSector2TimeInMS(lap.getSector2TimeMinutesPart() * 60000 + lap.getSector2TimeMSPart());
+                    carState.setLapDistance(lap.getLapDistance()); // Phase 10: corner zone detection
                 }
             }
             case PacketCarStatusData status -> {
@@ -151,6 +153,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     state.setFuelInTank(cs.getFuelInTank());
                     state.setErsStoreEnergy(cs.getErsStoreEnergy());
                     state.setVisualTyreCompound(cs.getVisualTyreCompound());
+                    state.setTyresAgeLaps(cs.getTyresAgeLaps()); // Phase 10: tyre age per lap
                 }
             }
             case PacketCarDamageData damage -> {
@@ -165,6 +168,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             }
             case PacketSessionData session -> {
                 liveSessionState.setTrackId(session.getTrackId());
+                liveSessionState.setTrackLength(session.getTrackLength());
                 liveSessionState.setSessionType(session.getSessionType());
                 liveSessionState.setWeather(session.getWeather());
                 liveSessionState.setTotalLaps(session.getTotalLaps());
@@ -173,11 +177,19 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 liveSessionState.setGameMode(session.getGameMode());
                 liveSessionState.setNetworkGame(session.getNetworkGame());
             }
+            // Phase 10: Motion data — capture lateral G-force for corner zone analysis
+            case PacketMotionData motion -> {
+                liveSessionState.setPlayerCarIndex(motion.getHeader().getPlayerCarIndex());
+                for (int i = 0; i < 22; i++) {
+                    CarMotionData cm = motion.getCarMotionData()[i];
+                    liveSessionState.getCars()[i].setGForceLateral(cm.getGForceLateral());
+                }
+            }
             // Route event packets to EventBroadcastService for real-time UI notifications
             case PacketEventData event -> {
                 eventBroadcastService.handleEvent(event);
                 if (PacketEventData.SESSION_ENDED.equals(event.getEventStringCode())) {
-                    ruleEngine.endSession();
+                    ruleEngine.endSession(liveSessionState);
                 }
             }
             default -> {}

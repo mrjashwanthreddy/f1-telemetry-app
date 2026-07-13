@@ -64,7 +64,37 @@ async function loadSessions() {
                 }
             };
             
+            // Phase 10: AI Debrief button
+            const aiDebriefBtn = document.createElement('button');
+            aiDebriefBtn.className = 'btn-ai-debrief';
+            aiDebriefBtn.innerHTML = '🤖 AI Debrief';
+            aiDebriefBtn.title = 'Get an AI-powered post-session analysis';
+            aiDebriefBtn.style.marginRight = '6px';
+            aiDebriefBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (typeof showSessionDebrief === 'function') {
+                    showSessionDebrief(session.sessionId);
+                }
+            };
+
+            // Phase 10: Chat button
+            const chatBtn = document.createElement('button');
+            chatBtn.className = 'btn-ai-chat';
+            chatBtn.innerHTML = '💬 Chat';
+            chatBtn.title = 'Ask your AI engineer about this session';
+            chatBtn.style.marginRight = '8px';
+            chatBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (typeof openChatPanel === 'function') {
+                    openChatPanel(session.sessionId, session.trackName, typeLabel);
+                }
+            };
+
             li.appendChild(infoDiv);
+            if (window.aiEnabled === true) {
+                li.appendChild(aiDebriefBtn);
+                li.appendChild(chatBtn);
+            }
             li.appendChild(deleteBtn);
             list.appendChild(li);
         });

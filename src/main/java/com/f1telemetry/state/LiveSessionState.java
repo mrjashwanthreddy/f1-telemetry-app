@@ -17,6 +17,7 @@ public class LiveSessionState {
     
     // Track & Session
     private byte trackId;
+    private int trackLength;     // Track length in meters
     private short sessionType;   // 0=Unknown,1=Practice,2=Qualifying,3=Race,4=Race2,5=Race3,6=TimeTrial
     private short weather;
     private short totalLaps;

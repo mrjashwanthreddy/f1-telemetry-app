@@ -32,7 +32,7 @@ jobs:
       - name: Generate Custom JRE (jlink)
         shell: pwsh
         run: |
-          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi --output target/custom-runtime
+          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki --output target/custom-runtime
 
       - name: Stage Packaging Input
         shell: pwsh
@@ -54,7 +54,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || 'Manual Build (latest)' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'F1Telemetry-windows-latest' }}
           files: target/dist/F1Telemetry-Windows.zip
           draft: false
           prerelease: false

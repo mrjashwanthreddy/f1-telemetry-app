@@ -52,6 +52,9 @@ public class PreferenceService {
         pref.setBrakeOverheatTemp(updateReq.getBrakeOverheatTemp());
         pref.setCriticalFuelDelta(updateReq.getCriticalFuelDelta());
         pref.setLowBatteryPercentage(updateReq.getLowBatteryPercentage());
+        pref.setVoiceHotkey(updateReq.getVoiceHotkey());
+        pref.setVoiceHotkeyLabel(updateReq.getVoiceHotkeyLabel());
+        pref.setAiEnabled(updateReq.isAiEnabled());
 
         UserPreference saved = preferenceRepository.save(pref);
         

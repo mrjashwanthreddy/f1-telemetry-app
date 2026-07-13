@@ -13,4 +13,9 @@ public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord
 
     @org.springframework.transaction.annotation.Transactional
     void deleteBySessionId(String sessionId);
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM TelemetryRecord t WHERE t.currentLapNum <= 0 OR (t.speed = 0 AND t.engineRPM = 0 AND t.throttle = 0 AND t.brake = 0 AND t.steer = 0 AND t.gForceLateral = 0 AND t.lapDistance = 0)")
+    int deleteEmptyOrInvalidRecords();
 }

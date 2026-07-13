@@ -23,6 +23,29 @@ public class UserPreference {
     private float criticalFuelDelta = 0.5f;
     private float lowBatteryPercentage = 10.0f;
 
+    // Phase 10: Customizable voice query hotkey (default Scroll Lock = keycode 70)
+    private Integer voiceHotkey = 70;
+    private String voiceHotkeyLabel = "Scroll Lock";
+
+    // AI Toggle settings (defaults to false)
+    private Boolean aiEnabled = false;
+
+    public boolean isAiEnabled() {
+        return aiEnabled != null ? aiEnabled : false;
+    }
+
+    public void setAiEnabled(boolean aiEnabled) {
+        this.aiEnabled = aiEnabled;
+    }
+
+    public int getVoiceHotkey() {
+        return voiceHotkey != null ? voiceHotkey : 70;
+    }
+
+    public String getVoiceHotkeyLabel() {
+        return voiceHotkeyLabel != null ? voiceHotkeyLabel : "Scroll Lock";
+    }
+
     public UserPreference(User user) {
         this.user = user;
     }

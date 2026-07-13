@@ -20,17 +20,20 @@ public class TelemetryBroadcastService {
     private final com.f1telemetry.engine.RuleEvaluationEngine ruleEngine;
     private final com.f1telemetry.service.PreferenceService preferenceService;
     private final com.f1telemetry.service.AsyncPersistenceService asyncPersistenceService;
+    private final com.f1telemetry.service.ActiveUserService activeUserService;
 
     public TelemetryBroadcastService(SimpMessagingTemplate messagingTemplate, 
                                      LiveSessionState liveSessionState,
                                      com.f1telemetry.engine.RuleEvaluationEngine ruleEngine,
                                      com.f1telemetry.service.PreferenceService preferenceService,
-                                     com.f1telemetry.service.AsyncPersistenceService asyncPersistenceService) {
+                                     com.f1telemetry.service.AsyncPersistenceService asyncPersistenceService,
+                                     com.f1telemetry.service.ActiveUserService activeUserService) {
         this.messagingTemplate = messagingTemplate;
         this.liveSessionState = liveSessionState;
         this.ruleEngine = ruleEngine;
         this.preferenceService = preferenceService;
         this.asyncPersistenceService = asyncPersistenceService;
+        this.activeUserService = activeUserService;
     }
 
     /**
@@ -48,13 +51,15 @@ public class TelemetryBroadcastService {
             // Broadcast live telemetry to dashboard
             messagingTemplate.convertAndSend("/topic/live-telemetry", liveSessionState);
 
-            // Fetch user preferences (using the default engineer created in manual testing for this demo)
-            // In a multi-user server, you'd map this to active websocket sessions
+            // Fetch user preferences dynamically for the active logged-in driver
             com.f1telemetry.domain.UserPreference prefs = null;
-            try {
-                prefs = preferenceService.getPreferences("engineer1");
-            } catch (Exception e) {
-                // Ignore if user doesn't exist yet
+            com.f1telemetry.domain.User activeUser = activeUserService.getActiveUser();
+            if (activeUser != null) {
+                try {
+                    prefs = preferenceService.getPreferences(activeUser.getUsername());
+                } catch (Exception e) {
+                    // Ignore if user doesn't exist yet
+                }
             }
 
             // Evaluate Rules
