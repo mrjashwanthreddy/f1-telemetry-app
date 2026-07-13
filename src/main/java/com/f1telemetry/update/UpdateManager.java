@@ -139,7 +139,7 @@ public class UpdateManager {
     private void showUpdatePrompt(String version, String body, String downloadUrl) {
         String message = String.format(
                 "A new update (%s) is available!\n\nRelease Notes:\n%s\n\nWould you like to download and install this update now?",
-                version, body == null || body.isBlank() ? "Bug fixes and performance improvements." : body
+                version, body == null || body.isBlank() || body.trim().equalsIgnoreCase("null") ? "Bug fixes and performance improvements." : body
         );
         int choice = JOptionPane.showConfirmDialog(
                 null,
@@ -173,8 +173,7 @@ public class UpdateManager {
             File zipFile = null;
             try {
                 // Find root execution folder where F1Telemetry.exe sits
-                File runningJar = new File(UpdateManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-                File installRoot = runningJar.getParentFile().getParentFile(); // F1Telemetry root
+                File installRoot = new File(".").getAbsoluteFile();
                 zipFile = new File(installRoot, "update.zip");
 
                 // 1. Download ZIP file
@@ -255,8 +254,19 @@ public class UpdateManager {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
+                // Strip the root F1Telemetry folder wrapper if present in the ZIP
+                String entryName = entry.getName();
+                if (entryName.startsWith("F1Telemetry/") || entryName.startsWith("F1Telemetry\\")) {
+                    entryName = entryName.substring("F1Telemetry/".length());
+                }
+                
+                if (entryName.isEmpty()) {
+                    zis.closeEntry();
+                    continue;
+                }
+
                 // Resolve entry file path
-                File newFile = new File(destDir, entry.getName());
+                File newFile = new File(destDir, entryName);
                 
                 // Prevent Zip Slip vulnerability
                 String destDirPath = destDir.getCanonicalPath();
