@@ -86,10 +86,14 @@ h1 {
 .telemetry-grid {
     display: grid;
     grid-template-columns: 1.1fr 2fr 1.1fr;
-    grid-template-rows: minmax(0, 1.45fr) minmax(0, 0.55fr);
-    gap: 16px;
+    grid-template-rows: minmax(0, 1.3fr) minmax(0, 0.7fr);
+    gap: 12px;
     flex: 1;
     min-height: 0;
+}
+.telemetry-grid .panel {
+    padding: 10px 14px;
+    border-radius: 12px;
 }
 
 .panel {
@@ -124,7 +128,7 @@ h2 {
 .bars {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
     flex: 1;
     justify-content: center;
 }
@@ -132,30 +136,30 @@ h2 {
 .bar-container {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
 .label {
-    width: 45px;
+    width: 35px;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     letter-spacing: 1px;
 }
 
 .value {
-    width: 60px;
+    width: 50px;
     text-align: right;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     font-variant-numeric: tabular-nums;
     color: var(--text-main);
 }
 
 .bar-bg {
     flex: 1;
-    height: 28px;
+    height: 20px;
     background-color: #e2e8f0;
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
     border: 1px solid rgba(0, 0, 0, 0.06);
     padding: 2px;
@@ -193,29 +197,29 @@ h2 {
 }
 
 .rpm-value {
-    font-size: 5.5rem;
+    font-size: 4.2rem;
     font-weight: 800;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -2px;
+    letter-spacing: -1px;
     color: var(--text-main);
 }
 
 .rpm-label {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     color: var(--text-dim);
     font-weight: 700;
-    letter-spacing: 6px;
-    margin-top: 5px;
+    letter-spacing: 4px;
+    margin-top: 3px;
     text-transform: uppercase;
 }
 
 .rev-bar-container {
     width: 85%;
-    height: 14px;
+    height: 12px;
     background-color: #e2e8f0;
     border-radius: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     overflow: hidden;
     border: 1px solid rgba(0, 0, 0, 0.06);
     padding: 2px;
@@ -241,14 +245,14 @@ h2 {
 }
 
 .speed-value {
-    font-size: 4.5rem;
+    font-size: 3.2rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: var(--text-main);
 }
 
 .gear-value {
-    font-size: 5.5rem;
+    font-size: 4.2rem;
     font-weight: 800;
     color: var(--accent-yellow);
 }
@@ -265,13 +269,13 @@ h2 {
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 8px;
 }
 
 .stat-box {
     background: #f8fafc;
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
     text-align: center;
     border: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
@@ -285,16 +289,16 @@ h2 {
 }
 
 .stat-label {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--text-dim);
-    margin-bottom: 6px;
-    letter-spacing: 1.5px;
+    margin-bottom: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 700;
 }
 
 .stat-value {
-    font-size: 1.65rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: var(--text-main);
 }
@@ -303,9 +307,9 @@ h2 {
 .tyres-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px 30px;
+    gap: 8px 16px;
     position: relative;
-    padding: 6px 0;
+    padding: 4px 0;
 }
 
 /* Chassis Center Line */
@@ -326,8 +330,8 @@ h2 {
     content: '';
     position: absolute;
     top: 30%;
-    left: calc(50% - 22px);
-    width: 44px;
+    left: calc(50% - 14px);
+    width: 28px;
     height: 2px;
     background: rgba(0, 0, 0, 0.08);
     z-index: 1;
@@ -335,8 +339,8 @@ h2 {
 
 .tyre-box {
     background-color: #f8fafc;
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -346,16 +350,16 @@ h2 {
 }
 
 .tyre-label {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     font-weight: 800;
-    margin-bottom: 6px;
+    margin-bottom: 3px;
     color: var(--text-dim);
 }
 
 .tyre-temp {
-    font-size: 1.8rem;
+    font-size: 1.3rem;
     font-weight: 800;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
     color: var(--text-main);
 }
 
@@ -515,27 +519,13 @@ h2 {
     to   { transform: translateY(-100%); opacity: 0; }
 }
 
-/* Session Event Log panel */
-.event-log-panel {
-    position: fixed;
-    bottom: 24px;
-    left: 24px;
-    z-index: 500;
-    width: 280px;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 12px;
-    overflow: hidden;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-}
-
+/* Session Event Log integrated styles */
 .event-log-header {
-    padding: 10px 16px;
+    padding: 8px 12px;
     background: rgba(0, 0, 0, 0.02);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     font-size: 0.8rem;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     color: var(--text-dim);
     font-weight: 800;
     text-transform: uppercase;
@@ -544,7 +534,6 @@ h2 {
 .event-log-entries {
     display: flex;
     flex-direction: column;
-    max-height: 250px;
     overflow-y: auto;
 }
 
@@ -901,4 +890,116 @@ h2 {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(59, 130, 246, 0.35);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Live Track Timeline & Standings Leaderboard Styles
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.car-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #64748b;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    transition: left 0.15s ease-out;
+}
+
+.car-marker.player {
+    background: #ff3366;
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+    z-index: 200;
+}
+
+.car-marker.player::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #ff3366;
+    animation: markerPulse 1.5s infinite;
+}
+
+.car-marker.safety-car {
+    background: #fbbf24;
+    color: #000000;
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    z-index: 150;
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+.standings-table-wrapper table tbody tr {
+    border-bottom: 1px solid var(--panel-border);
+    transition: background-color 0.15s;
+}
+
+.standings-table-wrapper table tbody tr.player-row {
+    background: rgba(255, 51, 102, 0.08);
+    font-weight: 700;
+}
+
+.standings-table-wrapper table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.standings-table-wrapper th, .standings-table-wrapper td {
+    padding: 4px 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive Zoom & Aspect Ratio Scaling Fallback
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1200px) or (max-height: 800px) {
+    body {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    #main-app {
+        height: auto !important;
+    }
+    
+    .telemetry-grid {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto !important;
+        height: auto !important;
+        flex: none !important;
+    }
+    
+    .inputs-panel, .core-panel, .status-panel, .leaderboard-panel {
+        grid-column: 1 / span 1 !important;
+        height: auto !important;
+        min-height: 350px !important;
+    }
+
+    .leaderboard-panel {
+        min-height: 400px !important;
+    }
+    
+    #history-tab, #settings-tab {
+        height: auto !important;
+        min-height: 100vh !important;
+    }
 }

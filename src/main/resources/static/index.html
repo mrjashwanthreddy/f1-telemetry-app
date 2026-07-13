@@ -69,16 +69,6 @@
 
         <div id="toast-container" class="toast-container"></div>
 
-        <!-- Session Event Log — live event feed for current session -->
-        <aside id="event-log-panel" class="event-log-panel">
-            <div class="event-log-header">⚡ Session Events</div>
-            <div id="event-log-entries" class="event-log-entries">
-                <div class="event-log-entry">
-                    <div class="event-log-dot info"></div>
-                    <div class="event-log-text" style="color: var(--text-dim);">Waiting for events…</div>
-                </div>
-            </div>
-        </aside>
 
         <!-- Live Dashboard Tab -->
         <main id="live-tab" class="tab-content active telemetry-grid">
@@ -244,20 +234,73 @@
                 </div>
             </section>
 
-            <!-- Bottom Panel: Live Telemetry Waveform -->
-            <section class="panel waveform-panel"
-                style="grid-column: 1 / span 3; display: flex; flex-direction: column; min-height: 0; padding: 12px 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2>LIVE TELEMETRY WAVEFORM</h2>
-                    <div style="display:flex; gap:15px; font-size:0.8rem; font-weight:700;">
-                        <span style="color:#10b981;">● THROTTLE</span>
-                        <span style="color:#ff3366;">● BRAKE</span>
-                        <span style="color:#3b82f6;">● SPEED</span>
+            <!-- Bottom Panel: Live Track Progress & Race Leaderboard -->
+            <section class="panel leaderboard-panel"
+                style="grid-column: 1 / span 3; display: flex; flex-direction: column; min-height: 0; padding: 12px 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h2>LIVE TRACK PROGRESS & STANDINGS</h2>
+                    <div id="leaderboard-summary" style="font-size:0.85rem; font-weight:700; color:var(--text-dim);">
+                        Active Cars: 0 | Safety Car: OFF
                     </div>
                 </div>
-                <div
-                    style="flex:1; position:relative; background:#f8fafc; border-radius:8px; overflow:hidden; border:1px solid rgba(0,0,0,0.06);">
-                    <canvas id="liveWaveformCanvas" style="width:100%; height:100%; display:block;"></canvas>
+
+                <!-- Horizontal Track Progress Map -->
+                <div class="track-timeline-container" style="position:relative; margin-bottom:12px; padding: 10px 0;">
+                    <div class="track-timeline-bg" style="position:relative; height:12px; background:linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); border-radius:6px; border:1px solid rgba(255,255,255,0.05); overflow:visible;">
+                        <!-- Sector markers inside the track timeline -->
+                        <div class="timeline-sector-line" style="position:absolute; left:33%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
+                        <div class="timeline-sector-line" style="position:absolute; left:66%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
+                        
+                        <!-- Dynamic Car Markers Container -->
+                        <div id="timeline-markers-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible;">
+                            <!-- Injected by JS: e.g. <div class="car-marker player" style="left: 45%;">1</div> -->
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-dim); margin-top:4px;">
+                        <span>START/FINISH</span>
+                        <span>SECTOR 1</span>
+                        <span>SECTOR 2</span>
+                        <span>SECTOR 3</span>
+                    </div>
+                </div>
+
+                <!-- Bottom content row: Standings & integrated Event Log -->
+                <div class="leaderboard-bottom-row" style="flex:1; display:flex; gap:16px; min-height:0; height:0;">
+                    <!-- Standings Table -->
+                    <div class="standings-table-wrapper" style="flex:3; min-height:0; height:100%; overflow-y:auto; border:1px solid var(--panel-border); border-radius:8px; background:#f8fafc;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.9rem;">
+                            <thead>
+                                <tr style="position:sticky; top:0; background:#f1f5f9; border-bottom:2px solid var(--panel-border); z-index:10; font-weight:800; color:var(--text-dim);">
+                                    <th style="padding:6px 12px;">POS</th>
+                                    <th style="padding:6px 12px;">CAR</th>
+                                    <th style="padding:6px 12px;">LAP</th>
+                                    <th style="padding:6px 12px;">SPEED</th>
+                                    <th style="padding:6px 12px;">LAST LAP</th>
+                                    <th style="padding:6px 12px;">TYRE</th>
+                                    <th style="padding:6px 12px;">WEAR (AVG)</th>
+                                    <th style="padding:6px 12px;">FRONT WING L/R</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-rows">
+                                <tr>
+                                    <td colspan="8" style="padding:20px; text-align:center; color:var(--text-dim);">Waiting for live session data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Integrated Event Log -->
+                    <div class="integrated-event-log" style="flex:1; display:flex; flex-direction:column; min-height:0; height:100%; border:1px solid var(--panel-border); border-radius:8px; background:#ffffff; overflow:hidden;">
+                        <div class="event-log-header" style="background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.06); padding:8px 12px; font-size:0.8rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; flex-shrink:0;">
+                            ⚡ Session Events
+                        </div>
+                        <div id="event-log-entries" class="event-log-entries" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; min-height:0;">
+                            <div class="event-log-entry" style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">
+                                <div class="event-log-dot info"></div>
+                                <div class="event-log-text" style="color: var(--text-dim); font-size:0.85rem;">Waiting for events…</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -319,6 +362,11 @@
 
                 <form id="settings-form" onsubmit="savePreferences(event)"
                     style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="input-group" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
+                        <label for="pref-ai-enabled" style="margin-bottom: 0; cursor: pointer;">Enable AI Race Engineer Features</label>
+                        <input type="checkbox" id="pref-ai-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent-blue);">
+                    </div>
+
                     <div class="input-group">
                         <label for="pref-tire-temp">Tire Overheat Threshold (°C)</label>
                         <input type="number" id="pref-tire-temp" step="1" min="50" max="150" required>
@@ -336,7 +384,7 @@
                         <input type="number" id="pref-ers-battery" step="1" min="1" max="100" required>
                     </div>
 
-                    <div class="input-group" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                    <div id="settings-hotkey-group" class="input-group" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
                         <label>Race Engineer Voice Hotkey (OS-Level)</label>
                         <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
                             <span id="hotkey-display"

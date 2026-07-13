@@ -13,6 +13,7 @@ public class CarDamageData {
     private float[] tyresWear = new float[4];           // float[4] - tyre wear percentage
     private short[] tyresDamage = new short[4];         // uint8[4]
     private short[] brakesDamage = new short[4];        // uint8[4]
+    private short[] tyresBlisters = new short[4];       // uint8[4] - tyre blisters percentage
     private short frontLeftWingDamage;                  // uint8
     private short frontRightWingDamage;                 // uint8
     private short rearWingDamage;                       // uint8
@@ -32,5 +33,5 @@ public class CarDamageData {
     private short engineBlown;                          // uint8 - 0=OK, 1=blown
     private short engineSeized;                         // uint8 - 0=OK, 1=seized
 
-    public static final int SIZE = 42;
+    public static final int SIZE = 46;
 }

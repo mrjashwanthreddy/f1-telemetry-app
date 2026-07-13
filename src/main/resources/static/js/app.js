@@ -49,6 +49,7 @@ const MAX_RPM = 13500; // Approx max RPM for F1
 let currentVoiceHotkey = 70;
 let currentVoiceHotkeyLabel = "Scroll Lock";
 let browserHotkeyListener = null;
+window.aiEnabled = false;
 
 function connect() {
     if (stompClient && (stompClient.connected || (stompClient.ws && (stompClient.ws.readyState === 1 || stompClient.ws.readyState === 0)))) {
@@ -77,6 +78,9 @@ function connect() {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             }).catch(e => console.error("Auto-session start error", e));
+
+            // Fetch preferences on startup to initialize window.aiEnabled
+            loadPreferences();
         }
         
         stompClient.subscribe('/topic/live-telemetry', function (message) {
@@ -89,11 +93,15 @@ function connect() {
 
             // Phase 10: Handle AI-specific alert types before the generic toast
             if (alertData.type === 'LAP_DEBRIEF') {
-                handleLapDebrief(alertData);
+                if (window.aiEnabled) {
+                    handleLapDebrief(alertData);
+                }
                 return; // LAP_DEBRIEF renders its own rich UI
             }
             if (alertData.type === 'VOICE_TRIGGER') {
-                activateVoiceQuery();
+                if (window.aiEnabled) {
+                    activateVoiceQuery();
+                }
                 return; // Voice trigger — no toast needed
             }
             if (alertData.type === 'HOTKEY_BOUND') {
@@ -102,7 +110,7 @@ function connect() {
             }
             if (alertData.type === 'SECTOR_DELTA') {
                 showToast(alertData);
-                if (typeof engineerSpeak === 'function') {
+                if (window.aiEnabled && typeof engineerSpeak === 'function') {
                     engineerSpeak(alertData.message, alertData.severity === 'SUCCESS');
                 }
                 return;
@@ -335,10 +343,8 @@ function updateDashboard(data) {
         wheelHUD.style.transform = `rotate(${Math.round(playerCar.steer * 120)}deg)`;
     }
 
-    // Push coordinates to the live rolling waveform
-    if (window.TelemetryChart) {
-        window.TelemetryChart.pushLiveWaveformPoint(playerCar.speed, playerCar.throttle, playerCar.brake);
-    }
+    // Update leaderboard standings and progress timeline
+    updateLeaderboardAndTimeline(data, playerIdx);
 
     // 3. Update Race Status
     elements.lapNum.textContent = playerCar.currentLapNum;
@@ -399,14 +405,108 @@ function updateDashboard(data) {
     elements.wingRVal.style.color = getDamageColor(wingR);
 }
 
-// Start connection & waveform rendering loop when page loads
+// Update live standings leaderboard and track progress timeline
+function updateLeaderboardAndTimeline(data, playerIdx) {
+    const markersContainer = document.getElementById('timeline-markers-container');
+    const rowsContainer = document.getElementById('leaderboard-rows');
+    const summaryText = document.getElementById('leaderboard-summary');
+    
+    if (!markersContainer || !rowsContainer) return;
+    
+    // Safety car state string
+    let safetyCarState = data.safetyCarStatus;
+    let safetyCarText = "OFF";
+    if (safetyCarState === 1 || safetyCarState === 2) safetyCarText = "VSC";
+    if (safetyCarState === 3) safetyCarText = "FULL SC";
+    
+    let trackLength = data.trackLength;
+    if (!trackLength || trackLength <= 0) {
+        trackLength = 6000; // default F1 track length fallback
+    }
+    
+    // Filter active cars (position between 1 and 22)
+    const activeCars = data.cars.filter(car => car.position > 0 && car.position <= 22);
+    
+    if (summaryText) {
+        summaryText.textContent = `Active Cars: ${activeCars.length} | Safety Car: ${safetyCarText}`;
+    }
+    
+    // 1. Render Track Timeline Markers
+    markersContainer.innerHTML = '';
+    
+    activeCars.forEach(car => {
+        let distance = Math.max(0, Math.min(trackLength, car.lapDistance));
+        let pct = (distance / trackLength) * 100;
+        
+        const marker = document.createElement('div');
+        marker.className = 'car-marker';
+        if (car.carIndex === playerIdx) {
+            marker.classList.add('player');
+        }
+        marker.style.left = `${pct}%`;
+        marker.textContent = car.position;
+        marker.title = `Car #${car.carIndex} (P${car.position}) - ${Math.round(car.lapDistance)}m`;
+        
+        markersContainer.appendChild(marker);
+    });
+    
+    // 2. Render Standings Table Rows
+    activeCars.sort((a, b) => a.position - b.position);
+    
+    if (activeCars.length === 0) {
+        rowsContainer.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-dim);">Waiting for live standings...</td></tr>`;
+        return;
+    }
+    
+    rowsContainer.innerHTML = '';
+    activeCars.forEach(car => {
+        const isPlayer = car.carIndex === playerIdx;
+        const row = document.createElement('tr');
+        if (isPlayer) {
+            row.classList.add('player-row');
+        }
+        
+        const lastLapTime = formatLapTime(car.lastLapTimeInMS);
+        const tyreComp = getCompoundName(car.visualTyreCompound);
+        const tyreBadge = `<span style="background:${tyreComp.bg}; color:${tyreComp.color}; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:800;">${tyreComp.text}</span>`;
+        
+        let avgWear = 0;
+        if (car.tyreWear && car.tyreWear.length === 4) {
+            avgWear = Math.round((car.tyreWear[0] + car.tyreWear[1] + car.tyreWear[2] + car.tyreWear[3]) / 4);
+        }
+        
+        const wingL = car.frontLeftWingDamage;
+        const wingR = car.frontRightWingDamage;
+        const wingText = `<span style="color:${getDamageColor(wingL)};">${wingL}%</span> / <span style="color:${getDamageColor(wingR)};">${wingR}%</span>`;
+        
+        row.innerHTML = `
+            <td style="padding:6px 12px; font-weight:700;">P${car.position}</td>
+            <td style="padding:6px 12px; font-weight:600;">${isPlayer ? 'YOU' : 'Car #' + car.carIndex}</td>
+            <td style="padding:6px 12px;">L${car.currentLapNum}</td>
+            <td style="padding:6px 12px;">${car.speed} km/h</td>
+            <td style="padding:6px 12px; font-family:var(--font-main);">${lastLapTime}</td>
+            <td style="padding:6px 12px;">${tyreBadge}</td>
+            <td style="padding:6px 12px;">${avgWear}%</td>
+            <td style="padding:6px 12px;">${wingText}</td>
+        `;
+        
+        rowsContainer.appendChild(row);
+    });
+}
+
+// Start connection when page loads
 window.onload = function() {
     connect();
-    if (window.TelemetryChart) {
-        window.TelemetryChart.initLiveWaveform('liveWaveformCanvas');
-    }
     loadPreferences();
 };
+
+// Load and save user preference functions
+function toggleHotkeyGroupVisibility(visible) {
+    const hotkeyGroup = document.getElementById('settings-hotkey-group');
+    if (hotkeyGroup) {
+        hotkeyGroup.style.display = visible ? 'block' : 'none';
+    }
+}
 
 // Load and save user preference functions
 function loadPreferences() {
@@ -426,6 +526,7 @@ function loadPreferences() {
         const fuelField = document.getElementById('pref-fuel-level');
         const batteryField = document.getElementById('pref-ers-battery');
         const hotkeyDisplay = document.getElementById('hotkey-display');
+        const aiToggle = document.getElementById('pref-ai-enabled');
 
         if (tireField) tireField.value = Math.round(data.tireOverheatTemp);
         if (brakeField) brakeField.value = Math.round(data.brakeOverheatTemp);
@@ -440,6 +541,16 @@ function loadPreferences() {
         if (hotkeyDisplay) {
             hotkeyDisplay.textContent = currentVoiceHotkeyLabel;
         }
+        
+        let aiEnabled = data.aiEnabled === true;
+        if (aiToggle) {
+            aiToggle.checked = aiEnabled;
+            toggleHotkeyGroupVisibility(aiEnabled);
+            aiToggle.onchange = (e) => {
+                toggleHotkeyGroupVisibility(e.target.checked);
+            };
+        }
+        window.aiEnabled = aiEnabled;
     })
     .catch(error => {
         console.error("Error loading preferences:", error);
@@ -457,7 +568,8 @@ function savePreferences(event) {
         criticalFuelDelta: parseFloat(document.getElementById('pref-fuel-level').value),
         lowBatteryPercentage: parseFloat(document.getElementById('pref-ers-battery').value),
         voiceHotkey: currentVoiceHotkey,
-        voiceHotkeyLabel: currentVoiceHotkeyLabel
+        voiceHotkeyLabel: currentVoiceHotkeyLabel,
+        aiEnabled: document.getElementById('pref-ai-enabled').checked
     };
 
     fetch('/api/preferences', {
@@ -473,6 +585,7 @@ function savePreferences(event) {
         return response.json();
     })
     .then(data => {
+        window.aiEnabled = data.aiEnabled === true;
         showToast({
             type: 'SUCCESS',
             severity: 'SUCCESS',

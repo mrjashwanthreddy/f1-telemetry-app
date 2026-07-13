@@ -39,6 +39,11 @@ public class AsyncPersistenceService {
 
         int playerIdx = state.getPlayerCarIndex();
         CarState playerCar = state.getCars()[playerIdx];
+
+        // Skip enqueuing if it's not a proper lap or the telemetry is empty (e.g. in garage/menu/paused)
+        if (playerCar.getCurrentLapNum() <= 0 || isEmptyTelemetry(playerCar)) {
+            return;
+        }
         
         String dbSessionId = com.f1telemetry.engine.RuleEvaluationEngine.getDbSessionId(state);
         int offsetLapNum = playerCar.getCurrentLapNum() + state.getLapOffset();
@@ -57,6 +62,16 @@ public class AsyncPersistenceService {
         );
         
         writeQueue.offer(record);
+    }
+
+    private boolean isEmptyTelemetry(CarState playerCar) {
+        return playerCar.getSpeed() == 0 
+            && playerCar.getEngineRPM() == 0 
+            && playerCar.getThrottle() == 0.0f 
+            && playerCar.getBrake() == 0.0f 
+            && playerCar.getSteer() == 0.0f 
+            && playerCar.getGForceLateral() == 0.0f 
+            && playerCar.getLapDistance() == 0.0f;
     }
 
     /**

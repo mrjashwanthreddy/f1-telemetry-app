@@ -33,6 +33,7 @@ public class AiEngineerController {
     private final UserRepository userRepository;
     private final CornerAnalysisService cornerAnalysisService;
     private final GlobalHotkeyService globalHotkeyService;
+    private final com.f1telemetry.service.PreferenceService preferenceService;
 
     // ── Status ─────────────────────────────────────────────────────────────────
 
@@ -41,11 +42,24 @@ public class AiEngineerController {
      */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
+        boolean activeEnabled = false;
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            if (username != null && !username.equals("anonymousUser")) {
+                activeEnabled = preferenceService.getPreferences(username).isAiEnabled();
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
         return ResponseEntity.ok(Map.of(
             "aiConfigured", aiEngineerService.isConfigured(),
-            "model", "gemini-2.0-flash"
+            "model", aiEngineerService.getModelName(),
+            "aiEnabled", activeEnabled
         ));
     }
+
+
 
     /**
      * Puts the global hotkey service into "bind mode" to record the next keypress.
@@ -82,6 +96,13 @@ public class AiEngineerController {
     @PostMapping("/session-debrief/{sessionId}")
     public ResponseEntity<?> generateSessionDebrief(@PathVariable String sessionId) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+        if (prefs == null || !prefs.isAiEnabled()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "AI features are disabled in settings."
+            ));
+        }
 
         Optional<RaceSession> sessionOpt = userRepository.findByUsername(username)
             .flatMap(user -> sessionRepository.findBySessionId(sessionId)
@@ -172,6 +193,13 @@ public class AiEngineerController {
     @PostMapping("/chat")
     public ResponseEntity<?> chat(@RequestBody ChatRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+        if (prefs == null || !prefs.isAiEnabled()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "AI features are disabled in settings."
+            ));
+        }
 
         if (request.getQuestion() == null || request.getQuestion().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Question cannot be empty."));

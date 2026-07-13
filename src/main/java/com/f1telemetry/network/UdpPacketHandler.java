@@ -168,6 +168,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             }
             case PacketSessionData session -> {
                 liveSessionState.setTrackId(session.getTrackId());
+                liveSessionState.setTrackLength(session.getTrackLength());
                 liveSessionState.setSessionType(session.getSessionType());
                 liveSessionState.setWeather(session.getWeather());
                 liveSessionState.setTotalLaps(session.getTotalLaps());
@@ -188,7 +189,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             case PacketEventData event -> {
                 eventBroadcastService.handleEvent(event);
                 if (PacketEventData.SESSION_ENDED.equals(event.getEventStringCode())) {
-                    ruleEngine.endSession();
+                    ruleEngine.endSession(liveSessionState);
                 }
             }
             default -> {}

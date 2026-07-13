@@ -91,8 +91,10 @@ async function loadSessions() {
             };
 
             li.appendChild(infoDiv);
-            li.appendChild(aiDebriefBtn);
-            li.appendChild(chatBtn);
+            if (window.aiEnabled === true) {
+                li.appendChild(aiDebriefBtn);
+                li.appendChild(chatBtn);
+            }
             li.appendChild(deleteBtn);
             list.appendChild(li);
         });

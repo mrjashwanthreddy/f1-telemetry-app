@@ -27,6 +27,8 @@ public class CornerAnalysisService {
     @lombok.Data
     public static class CornerPerformance {
         private String cornerName;
+        private float startMetres;
+        private float endMetres;
         private int minSpeed = Integer.MAX_VALUE;
         private int maxSpeed = 0;
         private float maxGForce = 0.0f;
@@ -75,6 +77,8 @@ public class CornerAnalysisService {
 
             CornerPerformance perf = new CornerPerformance();
             perf.setCornerName(zone.name());
+            perf.setStartMetres(zone.startMetres());
+            perf.setEndMetres(zone.endMetres());
             perf.setSampleCount(zoneRecords.size());
 
             float steerSum = 0.0f;
@@ -137,12 +141,60 @@ public class CornerAnalysisService {
         return sb.toString();
     }
 
-    private int getTrackIdByName(String trackName) {
+    public int getTrackIdByName(String trackName) {
         if (trackName == null) return -1;
         String name = trackName.toLowerCase();
-        if (name.contains("austria")) return 17;
-        if (name.contains("silverstone")) return 7;
-        if (name.contains("monaco")) return 5;
+        if (name.contains("melbourne") || name.contains("australia")) return 0;
+        if (name.contains("paul ricard") || name.contains("france")) return 1;
+        if (name.contains("shanghai") || name.contains("china")) return 2;
+        if (name.contains("bahrain") || name.contains("sakhir")) {
+            if (name.contains("short")) return 21;
+            return 3;
+        }
+        if (name.contains("catalunya") || name.contains("barcelona") || name.contains("spain")) return 4;
+        if (name.contains("monaco") || name.contains("monte carlo")) return 5;
+        if (name.contains("montreal") || name.contains("canada") || name.contains("gilles")) return 6;
+        if (name.contains("silverstone") || name.contains("britain") || name.contains("uk")) {
+            if (name.contains("short")) return 22;
+            return 7;
+        }
+        if (name.contains("hockenheim") || name.contains("germany")) return 8;
+        if (name.contains("hungaroring") || name.contains("hungary")) return 9;
+        if (name.contains("spa") || name.contains("belgium")) return 10;
+        if (name.contains("monza") || name.contains("italy")) return 11;
+        if (name.contains("singapore") || name.contains("marina bay")) return 12;
+        if (name.contains("suzuka") || name.contains("japan")) {
+            if (name.contains("short")) return 24;
+            return 13;
+        }
+        if (name.contains("abu dhabi") || name.contains("yas marina")) return 14;
+        if (name.contains("texas") || name.contains("cota") || name.contains("americas") || name.contains("austin")) {
+            if (name.contains("short")) return 23;
+            return 15;
+        }
+        if (name.contains("brazil") || name.contains("interlagos")) return 16;
+        if (name.contains("austria") || name.contains("red bull ring")) return 17;
+        if (name.contains("sochi") || name.contains("russia")) return 18;
+        if (name.contains("mexico") || name.contains("hermanos rodriguez")) return 19;
+        if (name.contains("baku") || name.contains("azerbaijan")) return 20;
+        if (name.contains("hanoi") || name.contains("vietnam")) return 25;
+        if (name.contains("zandvoort") || name.contains("netherlands") || name.contains("dutch")) return 26;
+        if (name.contains("imola") || name.contains("emilia")) return 27;
+        if (name.contains("portimao") || name.contains("portugal")) return 28;
+        if (name.contains("jeddah") || name.contains("saudi")) return 29;
+        if (name.contains("miami")) return 30;
+        if (name.contains("las vegas") || name.contains("vegas")) return 31;
+        if (name.contains("losail") || name.contains("qatar")) return 32;
         return -1;
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
+    public static class LapCornerAnalysisResponse {
+        private String trackName;
+        private float trackLength;
+        private int trackId;
+        private Map<String, CornerPerformance> corners;
     }
 }

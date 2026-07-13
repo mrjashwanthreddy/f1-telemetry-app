@@ -27,6 +27,17 @@ public class UserPreference {
     private Integer voiceHotkey = 70;
     private String voiceHotkeyLabel = "Scroll Lock";
 
+    // AI Toggle settings (defaults to false)
+    private Boolean aiEnabled = false;
+
+    public boolean isAiEnabled() {
+        return aiEnabled != null ? aiEnabled : false;
+    }
+
+    public void setAiEnabled(boolean aiEnabled) {
+        this.aiEnabled = aiEnabled;
+    }
+
     public int getVoiceHotkey() {
         return voiceHotkey != null ? voiceHotkey : 70;
     }

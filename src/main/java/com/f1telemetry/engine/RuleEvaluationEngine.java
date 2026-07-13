@@ -113,7 +113,7 @@ public class RuleEvaluationEngine {
         if (state.getLastUpdateTime() > 0 && (now - state.getLastUpdateTime() > 10000)) {
             if (currentDbSessionId != null) {
                 log.info("Inactivity detected (10s). Resetting current session tracking.");
-                endSession();
+                endSession(state);
             }
             return alerts;
         }
@@ -127,7 +127,7 @@ public class RuleEvaluationEngine {
         CarState playerCar = state.getCars()[playerIdx];
 
         // 3. Lap Completion Tracking
-        trackLaps(playerCar, state, alerts);
+        trackLaps(playerCar, state, alerts, prefs);
 
         // 4. Rules Evaluation
         if (prefs == null)
@@ -248,7 +248,7 @@ public class RuleEvaluationEngine {
         }
     }
 
-    private void trackLaps(CarState playerCar, LiveSessionState state, List<AlertEvent> alerts) {
+    private void trackLaps(CarState playerCar, LiveSessionState state, List<AlertEvent> alerts, UserPreference prefs) {
         String dbSessionId = getDbSessionId(state);
         String gameSessionId = state.getSessionId();
 
@@ -341,11 +341,13 @@ public class RuleEvaluationEngine {
             saveLapRecord((short) completedLapDbNum, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
 
             // Phase 10: Fire AI lap alert async (non-blocking — never delays telemetry pipeline)
-            aiLapAlertService.fireLapAlertAsync(
-                completedLapDbNum, cachedS1, cachedS2,
-                (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2,
-                (int) playerCar.getLastLapTimeInMS(), state
-            );
+            if (prefs != null && prefs.isAiEnabled()) {
+                aiLapAlertService.fireLapAlertAsync(
+                    completedLapDbNum, cachedS1, cachedS2,
+                    (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2,
+                    (int) playerCar.getLastLapTimeInMS(), state
+                );
+            }
 
             // If the completed lap updated sector records, verify them
             if (cachedS1 > 0 && cachedS1 < bestSector1TimeMs) bestSector1TimeMs = cachedS1;
@@ -435,7 +437,37 @@ public class RuleEvaluationEngine {
         lapRepository.save(record);
     }
 
-    public void endSession() {
+    public void saveFinalLapIfMissing(LiveSessionState state) {
+        if (currentDbSessionId == null || lastSeenLap == -1) return;
+        
+        int playerIdx = state.getPlayerCarIndex();
+        com.f1telemetry.state.CarState playerCar = state.getCars()[playerIdx];
+        
+        if (playerCar.getLastLapTimeInMS() > 0) {
+            int completedLapDbNum = lastSeenLap + currentLapOffset;
+            
+            RaceSession session = sessionRepository.findBySessionId(currentDbSessionId).orElse(null);
+            if (session != null) {
+                boolean exists = lapRepository.existsByRaceSessionAndLapNumber(session, completedLapDbNum);
+                if (!exists) {
+                    log.info("Saving final lap {} (Game lap {}) to database as lap {} on session end.", 
+                             lastSeenLap, lastSeenLap, completedLapDbNum);
+                    
+                    int s1 = playerCar.getSector1TimeInMS();
+                    int s2 = playerCar.getSector2TimeInMS();
+                    if (s1 == 0) s1 = cachedS1;
+                    if (s2 == 0) s2 = cachedS2;
+                    
+                    saveLapRecord((short) completedLapDbNum, s1, s2, (int) playerCar.getLastLapTimeInMS(), state);
+                }
+            }
+        }
+    }
+
+    public void endSession(LiveSessionState state) {
+        if (state != null) {
+            saveFinalLapIfMissing(state);
+        }
         log.info("Session end triggered. Resetting tracking variables.");
         this.currentDbSessionId = null;
         this.currentGameSessionId = null;
@@ -457,9 +489,6 @@ public class RuleEvaluationEngine {
 
     public static String getDbSessionId(LiveSessionState state) {
         if (state == null) return null;
-        if (state.getWeekendLinkIdentifier() != 0) {
-            return "weekend-" + state.getWeekendLinkIdentifier();
-        }
         return state.getSessionId();
     }
 
@@ -476,15 +505,16 @@ public class RuleEvaluationEngine {
      * Covers all modes: Practice, Qualifying, Race, Time Trial, Sprint, etc.
      */
     public static String resolveSessionType(LiveSessionState state) {
+        String baseType = SESSION_TYPES.getOrDefault((int) state.getSessionType(), "Unknown Session (ID " + state.getSessionType() + ")");
         if (state.getWeekendLinkIdentifier() != 0) {
             if (state.getGameMode() == 19 || state.getGameMode() == 20 || state.getGameMode() == 21 || state.getGameMode() == 22) {
-                return "Career Round";
+                return "Career " + baseType;
             } else if (state.getNetworkGame() == 1) {
-                return "Multiplayer Round";
+                return "Multiplayer " + baseType;
             } else {
-                return "Career/Multiplayer Round";
+                return "Career/Multiplayer " + baseType;
             }
         }
-        return SESSION_TYPES.getOrDefault((int) state.getSessionType(), "Unknown Session (ID " + state.getSessionType() + ")");
+        return baseType;
     }
 }

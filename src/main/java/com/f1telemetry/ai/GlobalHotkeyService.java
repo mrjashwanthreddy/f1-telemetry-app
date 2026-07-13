@@ -89,6 +89,10 @@ public class GlobalHotkeyService implements NativeKeyListener {
         }
 
         // Normal mode check
+        if (!isAiEnabled()) {
+            return;
+        }
+
         int targetHotkey = getActiveVoiceHotkey();
         if (keyCode == targetHotkey) {
             log.debug("[GlobalHotkey] Hotkey triggered: {}", keyText);
@@ -101,6 +105,19 @@ public class GlobalHotkeyService implements NativeKeyListener {
                 )
             );
         }
+    }
+
+    private boolean isAiEnabled() {
+        User activeUser = activeUserService.getActiveUser();
+        if (activeUser != null) {
+            try {
+                UserPreference prefs = preferenceService.getPreferences(activeUser.getUsername());
+                return prefs.isAiEnabled();
+            } catch (Exception e) {
+                // fall back to default
+            }
+        }
+        return false;
     }
 
     private int getActiveVoiceHotkey() {

@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class F1TelemetryApplication {
 
     public static void main(String[] args) {
+        // Register custom native library locator for JNativeHook
+        System.setProperty("jnativehook.lib.locator", "com.f1telemetry.ai.CustomLibraryLocator");
+
         // Load .env file into system properties so Spring @Value can resolve them.
         // Silently ignored if .env doesn't exist (production uses real env vars instead).
         try {

@@ -18,7 +18,7 @@ let currentUtterance = null;
  * Cancels any currently speaking utterance so new messages always play.
  */
 function engineerSpeak(text, urgent = false) {
-    if (!ttsEnabled || !window.speechSynthesis) return;
+    if (window.aiEnabled === false || !ttsEnabled || !window.speechSynthesis) return;
 
     // Cancel in-progress speech so urgent messages cut through
     window.speechSynthesis.cancel();

@@ -559,6 +559,10 @@ public class PacketDeserializer {
             for (int j = 0; j < 4; j++) brakeDmg[j] = buf.readUnsignedByte();
             cd.setBrakesDamage(brakeDmg);
 
+            short[] tyreBlisters = new short[4];
+            for (int j = 0; j < 4; j++) tyreBlisters[j] = buf.readUnsignedByte();
+            cd.setTyresBlisters(tyreBlisters);
+
             cd.setFrontLeftWingDamage(buf.readUnsignedByte());
             cd.setFrontRightWingDamage(buf.readUnsignedByte());
             cd.setRearWingDamage(buf.readUnsignedByte());

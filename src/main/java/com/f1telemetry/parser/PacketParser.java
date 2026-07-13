@@ -29,7 +29,7 @@ public class PacketParser {
             java.util.Map.entry(PacketIds.CAR_TELEMETRY, 1352),
             java.util.Map.entry(PacketIds.CAR_STATUS, 1239),
             java.util.Map.entry(PacketIds.FINAL_CLASSIFICATION, 1042),
-            java.util.Map.entry(PacketIds.CAR_DAMAGE, 10)
+            java.util.Map.entry(PacketIds.CAR_DAMAGE, 1041)
     );
 
     /**
