@@ -30,6 +30,14 @@ jobs:
         run: |
           (Get-Content src/main/resources/application.properties) -replace 'gemini.api.key=.*', 'gemini.api.key=${{ secrets.GEMINI_KEY }}' | Set-Content src/main/resources/application.properties
 
+      - name: Read Version from Properties
+        id: read_version
+        shell: pwsh
+        run: |
+          $ver = (Get-Content src/main/resources/application.properties | Select-String "app.version=").Line.Split("=")[1].Trim()
+          echo "Parsed version: $ver"
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
       - name: Build Fat Spring Boot JAR
         run: |
           mvn clean package -DskipTests
@@ -58,8 +66,8 @@ jobs:
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || 'F1Telemetry-windows-latest' }}
+          tag_name: v${{ steps.read_version.outputs.version }}
+          name: F1Telemetry v${{ steps.read_version.outputs.version }}
           files: target/dist/F1Telemetry-Windows.zip
           draft: false
           prerelease: false
