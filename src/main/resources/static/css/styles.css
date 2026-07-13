@@ -847,6 +847,17 @@ h2 {
     background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
 }
 
+.telemetry-btn.success {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.telemetry-btn.success:hover {
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
 /* Premium table headers & table styling */
 .lap-table th {
     background: rgba(59, 130, 246, 0.08) !important;
