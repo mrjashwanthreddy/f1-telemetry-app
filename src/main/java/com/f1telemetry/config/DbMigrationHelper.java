@@ -39,23 +39,22 @@ public class DbMigrationHelper implements CommandLineRunner {
         // Clean up old backup files left behind by auto-updates
         try {
             File rootDir = new File(".").getAbsoluteFile();
-            cleanOldFiles(rootDir);
+            cleanOldFilesInDir(rootDir);
+            File appDir = new File(rootDir, "app");
+            if (appDir.exists() && appDir.isDirectory()) {
+                cleanOldFilesInDir(appDir);
+            }
         } catch (Exception e) {
             log.warn("[Update] Failed to clean up old backup files: {}", e.getMessage());
         }
     }
 
-    private void cleanOldFiles(File dir) {
-        File[] files = dir.listFiles();
+    private void cleanOldFilesInDir(File dir) {
+        File[] files = dir.listFiles((parent, name) -> name.endsWith(".old"));
         if (files == null)
             return;
         for (File file : files) {
-            if (file.isDirectory()) {
-                // Avoid walking JCEF internal folders to save startup time
-                if (!file.getName().equals("jcef") && !file.getName().equals(".f1telemetry")) {
-                    cleanOldFiles(file);
-                }
-            } else if (file.getName().endsWith(".old")) {
+            if (file.isFile()) {
                 if (file.delete()) {
                     log.info("[Update] Cleaned up residual backup file: {}", file.getName());
                 } else {

@@ -4,13 +4,13 @@
     --panel-border: rgba(0, 0, 0, 0.08);
     --text-main: #0f172a;
     --text-dim: #64748b;
-    
+
     --accent-red: #dc2626;
     --accent-green: #15803d;
     --accent-blue: #1d4ed8;
     --accent-yellow: #b45309;
     --accent-purple: #7c3aed;
-    
+
     --font-main: 'Rajdhani', sans-serif;
 }
 
@@ -22,7 +22,7 @@
 
 body {
     background: #f1f5f9;
-    background-image: 
+    background-image:
         radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 100%),
         radial-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px);
     background-size: 100% 100%, 24px 24px;
@@ -91,6 +91,7 @@ h1 {
     flex: 1;
     min-height: 0;
 }
+
 .telemetry-grid .panel {
     padding: 10px 14px;
     border-radius: 12px;
@@ -173,7 +174,7 @@ h2 {
 }
 
 .bar-fill.throttle {
-    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    background: linear-gradient(90deg, #029e6a 0%, #34d399 100%);
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
 }
 
@@ -240,7 +241,8 @@ h2 {
     align-items: center;
 }
 
-.speed-display, .gear-display {
+.speed-display,
+.gear-display {
     text-align: center;
 }
 
@@ -452,18 +454,41 @@ h2 {
 }
 
 @keyframes slideIn {
-    from { transform: translateX(110%); opacity: 0; }
-    to   { transform: translateX(0);   opacity: 1; }
+    from {
+        transform: translateX(110%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideOut {
-    from { transform: translateX(0);   opacity: 1; max-height: 120px; }
-    to   { transform: translateX(110%); opacity: 0; max-height: 0; padding: 0; margin: 0; }
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 120px;
+    }
+
+    to {
+        transform: translateX(110%);
+        opacity: 0;
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+    }
 }
 
 @keyframes pulseRed {
-    from { box-shadow: 0 0 10px rgba(255, 51, 102, 0.2); }
-    to   { box-shadow: 0 0 25px rgba(255, 51, 102, 0.5); }
+    from {
+        box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+    }
+
+    to {
+        box-shadow: 0 0 25px rgba(255, 51, 102, 0.5);
+    }
 }
 
 /* Fastest Lap cinematic banner */
@@ -510,13 +535,27 @@ h2 {
 }
 
 @keyframes bannerSlideDown {
-    from { transform: translateY(-100%); opacity: 0; }
-    to   { transform: translateY(0);     opacity: 1; }
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes bannerSlideUp {
-    from { transform: translateY(0);     opacity: 1; }
-    to   { transform: translateY(-100%); opacity: 0; }
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
 }
 
 /* Session Event Log integrated styles */
@@ -547,7 +586,9 @@ h2 {
     animation: logEntryIn 0.3s ease-out forwards;
 }
 
-.event-log-entry:last-child { border-bottom: none; }
+.event-log-entry:last-child {
+    border-bottom: none;
+}
 
 .event-log-dot {
     width: 8px;
@@ -557,10 +598,23 @@ h2 {
     flex-shrink: 0;
 }
 
-.event-log-dot.success  { background: #ffd700; box-shadow: 0 0 8px rgba(255, 215, 0, 0.7); }
-.event-log-dot.critical { background: var(--accent-red); box-shadow: 0 0 8px rgba(255, 51, 102, 0.7); }
-.event-log-dot.warning  { background: var(--accent-yellow); }
-.event-log-dot.info     { background: var(--accent-blue); }
+.event-log-dot.success {
+    background: #ffd700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+}
+
+.event-log-dot.critical {
+    background: var(--accent-red);
+    box-shadow: 0 0 8px rgba(255, 51, 102, 0.7);
+}
+
+.event-log-dot.warning {
+    background: var(--accent-yellow);
+}
+
+.event-log-dot.info {
+    background: var(--accent-blue);
+}
 
 .event-log-text {
     flex: 1;
@@ -639,7 +693,8 @@ h2 {
     margin-top: 10px;
 }
 
-.lap-table th, .lap-table td {
+.lap-table th,
+.lap-table td {
     padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -678,13 +733,16 @@ h2 {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
 }
@@ -692,7 +750,10 @@ h2 {
 /* Auth Overlay */
 .auth-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     background: url('https://images.unsplash.com/photo-1541348263662-e06836264be4?auto=format&fit=crop&q=80') center/cover no-repeat;
     display: flex;
     justify-content: center;
@@ -703,7 +764,10 @@ h2 {
 .auth-overlay::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(3, 7, 18, 0.8);
     backdrop-filter: blur(10px);
 }
@@ -892,13 +956,16 @@ h2 {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(59, 130, 246, 0.35);
 }
@@ -956,8 +1023,15 @@ h2 {
 }
 
 @keyframes markerPulse {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(1.6); opacity: 0; }
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
 }
 
 .standings-table-wrapper table tbody tr {
@@ -974,7 +1048,8 @@ h2 {
     background: rgba(0, 0, 0, 0.02);
 }
 
-.standings-table-wrapper th, .standings-table-wrapper td {
+.standings-table-wrapper th,
+.standings-table-wrapper td {
     padding: 4px 8px;
 }
 
@@ -987,19 +1062,22 @@ h2 {
         overflow-y: auto !important;
         height: auto !important;
     }
-    
+
     #main-app {
         height: auto !important;
     }
-    
+
     .telemetry-grid {
         grid-template-columns: 1fr !important;
         grid-template-rows: auto !important;
         height: auto !important;
         flex: none !important;
     }
-    
-    .inputs-panel, .core-panel, .status-panel, .leaderboard-panel {
+
+    .inputs-panel,
+    .core-panel,
+    .status-panel,
+    .leaderboard-panel {
         grid-column: 1 / span 1 !important;
         height: auto !important;
         min-height: 350px !important;
@@ -1008,8 +1086,9 @@ h2 {
     .leaderboard-panel {
         min-height: 400px !important;
     }
-    
-    #history-tab, #settings-tab {
+
+    #history-tab,
+    #settings-tab {
         height: auto !important;
         min-height: 100vh !important;
     }
