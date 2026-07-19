@@ -82,19 +82,136 @@ h1 {
     box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
 }
 
-/* Grid Layout */
-.telemetry-grid {
+/* Grid Layouts */
+.live-dashboard-grid {
     display: grid;
     grid-template-columns: 1.1fr 2fr 1.1fr;
-    grid-template-rows: minmax(0, 1.3fr) minmax(0, 0.7fr);
+    grid-template-rows: 1fr;
     gap: 12px;
     flex: 1;
     min-height: 0;
 }
 
-.telemetry-grid .panel {
-    padding: 10px 14px;
-    border-radius: 12px;
+.live-dashboard-grid .panel {
+    padding: 12px 18px;
+    border-radius: 16px;
+    height: 100%;
+}
+
+.standings-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    height: calc(100vh - 120px);
+}
+
+.standings-left-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.standings-right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+}
+
+/* Driver Team Badge styling */
+.driver-badge-container {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    overflow: hidden;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.driver-badge-pos {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
+    padding: 2px 6px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.driver-badge-abbr {
+    color: #ffffff;
+    padding: 2px 8px;
+    text-transform: uppercase;
+}
+
+/* Sector highlights (light mode readable) */
+.sector-purple {
+    color: #7c3aed !important;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+
+.sector-green {
+    color: #15803d !important;
+    background: rgba(21, 128, 61, 0.08);
+    border: 1px solid rgba(21, 128, 61, 0.15);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+
+.sector-yellow {
+    color: #b45309 !important;
+    background: rgba(180, 83, 9, 0.08);
+    border: 1px solid rgba(180, 83, 9, 0.15);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+
+.sector-normal {
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+/* Sector Best Column rows */
+.sector-best-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: transform 0.1s ease;
+}
+
+.sector-best-row:hover {
+    transform: translateX(2px);
+}
+
+.sector-best-rank {
+    font-weight: 800;
+    color: var(--text-dim);
+    margin-right: 6px;
+}
+
+.sector-best-driver {
+    font-weight: 700;
+    flex: 1;
+}
+
+.sector-best-time {
+    font-weight: 800;
+    font-family: monospace;
 }
 
 .panel {
@@ -1057,7 +1174,12 @@ h2 {
    Responsive Zoom & Aspect Ratio Scaling Fallback
    ───────────────────────────────────────────────────────────────────────────── */
 
-@media (max-width: 1200px) or (max-height: 800px) {
+/* Tab content height scaling */
+.tab-content {
+    height: calc(100vh - 120px) !important;
+}
+
+@media (max-width: 1024px) or (max-height: 550px) {
     body {
         overflow-y: auto !important;
         height: auto !important;
@@ -1067,7 +1189,8 @@ h2 {
         height: auto !important;
     }
 
-    .telemetry-grid {
+    .live-dashboard-grid,
+    .standings-grid {
         grid-template-columns: 1fr !important;
         grid-template-rows: auto !important;
         height: auto !important;
@@ -1077,16 +1200,15 @@ h2 {
     .inputs-panel,
     .core-panel,
     .status-panel,
-    .leaderboard-panel {
+    .standings-left-panel,
+    .standings-right-panel {
         grid-column: 1 / span 1 !important;
         height: auto !important;
         min-height: 350px !important;
     }
 
-    .leaderboard-panel {
-        min-height: 400px !important;
-    }
-
+    #live-tab,
+    #standings-tab,
     #history-tab,
     #settings-tab {
         height: auto !important;

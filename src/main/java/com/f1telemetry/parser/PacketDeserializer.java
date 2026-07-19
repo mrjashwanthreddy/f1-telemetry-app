@@ -340,16 +340,15 @@ public class PacketDeserializer {
             pd.setMyTeam(buf.readUnsignedByte());
             pd.setRaceNumber(buf.readUnsignedByte());
             pd.setNationality(buf.readUnsignedByte());
-
-            // char[32] name - null terminated UTF-8
-            byte[] nameBytes = new byte[32];
+            // Dynamic name length: 48 bytes in F1 24, 32 bytes in F1 23/25
+            int nameLength = (header.getGameYear() == 24) ? 48 : 32;
+            byte[] nameBytes = new byte[nameLength];
             buf.readBytes(nameBytes);
             int nameLen = 0;
             while (nameLen < nameBytes.length && nameBytes[nameLen] != 0) {
                 nameLen++;
             }
             pd.setName(new String(nameBytes, 0, nameLen, StandardCharsets.UTF_8));
-
             pd.setYourTelemetry(buf.readUnsignedByte());
             pd.setShowOnlineNames(buf.readUnsignedByte());
             pd.setTechLevel(buf.readUnsignedShortLE());

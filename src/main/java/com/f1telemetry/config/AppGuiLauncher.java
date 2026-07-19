@@ -105,14 +105,22 @@ public class AppGuiLauncher {
         cefApp = builder.build();
         cefClient = cefApp.createClient();
 
-        // Prevent new windows from opening — redirect to same browser
+        // Allow popups to open in user's default system browser (useful for Netbanking/3DS redirects)
         cefClient.addLifeSpanHandler(new CefLifeSpanHandlerAdapter() {
             @Override
             public boolean onBeforePopup(CefBrowser browser, org.cef.browser.CefFrame frame,
                     String target_url, String target_frame_name) {
-                // Load popups in the same window instead of spawning new ones
-                browser.loadURL(target_url);
-                return true;
+                if (target_url != null && (target_url.startsWith("http://") || target_url.startsWith("https://"))) {
+                    if (java.awt.Desktop.isDesktopSupported()) {
+                        try {
+                            java.awt.Desktop.getDesktop().browse(new java.net.URI(target_url));
+                        } catch (Exception e) {
+                            logger.error("Failed to open popup URL in system browser: {}", target_url, e);
+                        }
+                    }
+                    return true; // Return true to prevent JCEF from opening or redirecting the main window
+                }
+                return false; // Return false to let JCEF handle internal popups (like about:blank)
             }
         });
 

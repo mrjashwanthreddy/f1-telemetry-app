@@ -405,6 +405,108 @@ function updateDashboard(data) {
     elements.wingRVal.style.color = getDamageColor(wingR);
 }
 
+// F1 23/24/25 Team mappings and colors
+const TEAM_INFO = {
+    0: { name: 'Mercedes', color: '#6CD3BF', text: '#000000' },
+    1: { name: 'Ferrari', color: '#F91536', text: '#ffffff' },
+    2: { name: 'Red Bull Racing', color: '#3671C6', text: '#ffffff' },
+    3: { name: 'Williams', color: '#37BEDD', text: '#ffffff' },
+    4: { name: 'Aston Martin', color: '#358C75', text: '#ffffff' },
+    5: { name: 'Alpine', color: '#2293D1', text: '#ffffff' },
+    6: { name: 'VCARB', color: '#6692FF', text: '#ffffff' },
+    7: { name: 'Haas', color: '#B6BABD', text: '#000000' },
+    8: { name: 'McLaren', color: '#F58020', text: '#ffffff' },
+    9: { name: 'Sauber', color: '#52E252', text: '#000000' }
+};
+
+function getTeamInfo(teamId) {
+    return TEAM_INFO[teamId] || { name: 'Formula 1', color: '#64748b', text: '#ffffff' };
+}
+
+// In-memory driver sector state tracking
+const driverStates = {};
+
+// Session best times for coloring overall fastest sectors (Purple)
+let sessionBestS1 = Infinity;
+let sessionBestS2 = Infinity;
+let sessionBestS3 = Infinity;
+let sessionBestLap = Infinity;
+
+function getDriverAbbreviation(name, carIndex) {
+    if (!name) return `C${carIndex}`;
+    const cleaned = name.trim().toUpperCase();
+    if (cleaned.startsWith("CAR #")) {
+        return "C" + cleaned.substring(5);
+    }
+    if (cleaned.startsWith("CAR#")) {
+        return "C" + cleaned.substring(4);
+    }
+    const parts = cleaned.split(/\s+/);
+    if (parts.length >= 2) {
+        const lastName = parts[parts.length - 1];
+        return lastName.substring(0, 3);
+    } else {
+        return cleaned.substring(0, 3);
+    }
+}
+
+function formatSectorTime(ms) {
+    if (!ms || ms <= 0) return "—";
+    const seconds = ms / 1000;
+    return seconds.toFixed(3);
+}
+
+function getSectorHighlightClass(time, personalBest, sessionBest) {
+    if (!time || time <= 0) return 'sector-normal';
+    if (time === sessionBest) return 'sector-purple';
+    if (time === personalBest) return 'sector-green';
+    return 'sector-normal';
+}
+
+function getTop3ForSector(activeCars, sectorNum) {
+    const list = [];
+    activeCars.forEach(car => {
+        let time = 0;
+        if (sectorNum === 1) time = car.bestSector1TimeInMS || 0;
+        else if (sectorNum === 2) time = car.bestSector2TimeInMS || 0;
+        else if (sectorNum === 3) time = car.bestSector3TimeInMS || 0;
+        
+        if (time > 0) {
+            list.push({ carIndex: car.carIndex, name: car.name || `Car #${car.carIndex}`, teamId: car.teamId, time });
+        }
+    });
+    list.sort((a, b) => a.time - b.time);
+    return list.slice(0, 3);
+}
+
+function updateSectorFastestLists(activeCars) {
+    for (let sec = 1; sec <= 3; sec++) {
+        const listEl = document.getElementById(`s${sec}-fastest-list`);
+        if (!listEl) continue;
+        
+        const top3 = getTop3ForSector(activeCars, sec);
+        if (top3.length === 0) {
+            listEl.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 10px;">No times</div>`;
+            continue;
+        }
+        
+        listEl.innerHTML = '';
+        top3.forEach((item, index) => {
+            const teamInfo = getTeamInfo(item.teamId);
+            const abbr = getDriverAbbreviation(item.name, item.carIndex);
+            
+            const row = document.createElement('div');
+            row.className = 'sector-best-row';
+            row.innerHTML = `
+                <span class="sector-best-rank">${index + 1}</span>
+                <span class="sector-best-driver" style="color: ${teamInfo.color};">${abbr}</span>
+                <span class="sector-best-time">${formatSectorTime(item.time)}</span>
+            `;
+            listEl.appendChild(row);
+        });
+    }
+}
+
 // Update live standings leaderboard and track progress timeline
 function updateLeaderboardAndTimeline(data, playerIdx) {
     const markersContainer = document.getElementById('timeline-markers-container');
@@ -445,18 +547,42 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         }
         marker.style.left = `${pct}%`;
         marker.textContent = car.position;
-        marker.title = `Car #${car.carIndex} (P${car.position}) - ${Math.round(car.lapDistance)}m`;
+        marker.title = `${car.name || 'Car #' + car.carIndex} (P${car.position}) - ${Math.round(car.lapDistance)}m`;
         
         markersContainer.appendChild(marker);
     });
     
-    // 2. Render Standings Table Rows
+    // 2. Calculate Session Bests dynamically from the active cars' absolute best sector times
+    let sessionBestS1 = Infinity;
+    let sessionBestS2 = Infinity;
+    let sessionBestS3 = Infinity;
+    let sessionBestLap = Infinity;
+    
+    activeCars.forEach(car => {
+        const bestS1 = car.bestSector1TimeInMS || 0;
+        const bestS2 = car.bestSector2TimeInMS || 0;
+        const bestS3 = car.bestSector3TimeInMS || 0;
+        const bestLap = car.bestLapTimeInMS || 0;
+        
+        if (bestS1 > 0 && bestS1 < sessionBestS1) sessionBestS1 = bestS1;
+        if (bestS2 > 0 && bestS2 < sessionBestS2) sessionBestS2 = bestS2;
+        if (bestS3 > 0 && bestS3 < sessionBestS3) sessionBestS3 = bestS3;
+        if (bestLap > 0 && bestLap < sessionBestLap) sessionBestLap = bestLap;
+        
+        // Also compare live sector running times if they exceed the current bests
+        if (car.sector1TimeInMS > 0 && car.sector1TimeInMS < sessionBestS1) sessionBestS1 = car.sector1TimeInMS;
+        if (car.sector2TimeInMS > 0 && car.sector2TimeInMS < sessionBestS2) sessionBestS2 = car.sector2TimeInMS;
+    });
+    
+    // 3. Render Standings Table Rows
     activeCars.sort((a, b) => a.position - b.position);
     
     if (activeCars.length === 0) {
-        rowsContainer.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-dim);">Waiting for live standings...</td></tr>`;
+        rowsContainer.innerHTML = `<tr><td colspan="10" style="padding:20px; text-align:center; color:var(--text-dim);">Waiting for live standings...</td></tr>`;
         return;
     }
+    
+    const leaderBestLap = activeCars[0]?.bestLapTimeInMS || 0;
     
     rowsContainer.innerHTML = '';
     activeCars.forEach(car => {
@@ -466,32 +592,91 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
             row.classList.add('player-row');
         }
         
+        const teamInfo = getTeamInfo(car.teamId);
+        const driverAbbr = getDriverAbbreviation(car.name, car.carIndex);
+        
+        // Driver badge style (Team color tag)
+        const driverBadge = `
+            <div class="driver-badge-container">
+                <span class="driver-badge-pos" style="border-left: 3px solid ${teamInfo.color};">${car.position}</span>
+                <span class="driver-badge-abbr" style="background: ${teamInfo.color}; color: ${teamInfo.text};">${driverAbbr}</span>
+            </div>
+        `;
+        
         const lastLapTime = formatLapTime(car.lastLapTimeInMS);
+        const bestLapTime = car.bestLapTimeInMS > 0 ? formatLapTime(car.bestLapTimeInMS) : '—';
         const tyreComp = getCompoundName(car.visualTyreCompound);
         const tyreBadge = `<span style="background:${tyreComp.bg}; color:${tyreComp.color}; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:800;">${tyreComp.text}</span>`;
         
-        let avgWear = 0;
-        if (car.tyreWear && car.tyreWear.length === 4) {
-            avgWear = Math.round((car.tyreWear[0] + car.tyreWear[1] + car.tyreWear[2] + car.tyreWear[3]) / 4);
+        // Gap calculation
+        let gapText = '—';
+        if (car.position > 1 && leaderBestLap > 0 && car.bestLapTimeInMS > 0) {
+            const diff = car.bestLapTimeInMS - leaderBestLap;
+            gapText = `+${(diff / 1000).toFixed(3)}`;
         }
         
-        const wingL = car.frontLeftWingDamage;
-        const wingR = car.frontRightWingDamage;
-        const wingText = `<span style="color:${getDamageColor(wingL)};">${wingL}%</span> / <span style="color:${getDamageColor(wingR)};">${wingR}%</span>`;
+        // Sector displays (live vs last lap completed fallback)
+        let s1Val = '—', s2Val = '—', s3Val = '—';
+        let s1Class = '', s2Class = '', s3Class = '';
+        
+        const lastS1 = car.lastLapSector1TimeInMS || 0;
+        const lastS2 = car.lastLapSector2TimeInMS || 0;
+        const lastS3 = car.lastLapSector3TimeInMS || 0;
+        
+        const bestS1 = car.bestSector1TimeInMS || 0;
+        const bestS2 = car.bestSector2TimeInMS || 0;
+        const bestS3 = car.bestSector3TimeInMS || 0;
+        
+        if (car.sector === 0) {
+            // In Sector 1: show last lap's completed sector times
+            s1Val = lastS1 > 0 ? formatSectorTime(lastS1) : '—';
+            s1Class = getSectorHighlightClass(lastS1, bestS1, sessionBestS1);
+            
+            s2Val = lastS2 > 0 ? formatSectorTime(lastS2) : '—';
+            s2Class = getSectorHighlightClass(lastS2, bestS2, sessionBestS2);
+            
+            s3Val = lastS3 > 0 ? formatSectorTime(lastS3) : '—';
+            s3Class = getSectorHighlightClass(lastS3, bestS3, sessionBestS3);
+        } else if (car.sector === 1) {
+            // In Sector 2: S1 is completed live, S2 and S3 show last lap's times
+            s1Val = car.sector1TimeInMS > 0 ? formatSectorTime(car.sector1TimeInMS) : '—';
+            s1Class = getSectorHighlightClass(car.sector1TimeInMS, bestS1, sessionBestS1);
+            
+            s2Val = lastS2 > 0 ? formatSectorTime(lastS2) : '—';
+            s2Class = getSectorHighlightClass(lastS2, bestS2, sessionBestS2);
+            
+            s3Val = lastS3 > 0 ? formatSectorTime(lastS3) : '—';
+            s3Class = getSectorHighlightClass(lastS3, bestS3, sessionBestS3);
+        } else if (car.sector === 2) {
+            // In Sector 3: S1 and S2 are completed live, S3 shows last lap's time
+            s1Val = car.sector1TimeInMS > 0 ? formatSectorTime(car.sector1TimeInMS) : '—';
+            s1Class = getSectorHighlightClass(car.sector1TimeInMS, bestS1, sessionBestS1);
+            
+            s2Val = car.sector2TimeInMS > 0 ? formatSectorTime(car.sector2TimeInMS) : '—';
+            s2Class = getSectorHighlightClass(car.sector2TimeInMS, bestS2, sessionBestS2);
+            
+            s3Val = lastS3 > 0 ? formatSectorTime(lastS3) : '—';
+            s3Class = getSectorHighlightClass(lastS3, bestS3, sessionBestS3);
+        }
         
         row.innerHTML = `
             <td style="padding:6px 12px; font-weight:700;">P${car.position}</td>
-            <td style="padding:6px 12px; font-weight:600;">${isPlayer ? 'YOU' : 'Car #' + car.carIndex}</td>
-            <td style="padding:6px 12px;">L${car.currentLapNum}</td>
-            <td style="padding:6px 12px;">${car.speed} km/h</td>
-            <td style="padding:6px 12px; font-family:var(--font-main);">${lastLapTime}</td>
+            <td style="padding:6px 12px;">${driverBadge}</td>
+            <td style="padding:6px 12px; font-family:monospace;">${lastLapTime}</td>
+            <td style="padding:6px 12px; font-family:monospace; font-weight:700; color:var(--text-main);">${bestLapTime}</td>
             <td style="padding:6px 12px;">${tyreBadge}</td>
-            <td style="padding:6px 12px;">${avgWear}%</td>
-            <td style="padding:6px 12px;">${wingText}</td>
+            <td style="padding:6px 12px; font-weight:700;">${car.tyresAgeLaps || 0}</td>
+            <td style="padding:6px 12px; font-family:monospace;">${gapText}</td>
+            <td style="padding:6px 12px; font-family:monospace;"><span class="${s1Class}">${s1Val}</span></td>
+            <td style="padding:6px 12px; font-family:monospace;"><span class="${s2Class}">${s2Val}</span></td>
+            <td style="padding:6px 12px; font-family:monospace;"><span class="${s3Class}">${s3Val}</span></td>
         `;
         
         rowsContainer.appendChild(row);
     });
+    
+    // 4. Update Fastest Sector Top 3 Widgets
+    updateSectorFastestLists(activeCars);
 }
 
 // Start connection when page loads
@@ -551,10 +736,62 @@ function loadPreferences() {
             aiToggle.checked = aiEnabled;
             toggleHotkeyGroupVisibility(aiEnabled);
             aiToggle.onchange = (e) => {
+                if (e.target.checked) {
+                    const balance = parseFloat(document.getElementById('header-wallet-balance')?.textContent || '0.00');
+                    if (balance < 5.00) {
+                        showToast({
+                            type: 'WARNING',
+                            severity: 'WARNING',
+                            message: 'Enabling AI features requires a minimum wallet balance of $5.00'
+                        });
+                        e.target.checked = false;
+                        toggleHotkeyGroupVisibility(false);
+                        
+                        // Automatically open wallet dropdown to guide user
+                        const dropdown = document.getElementById('header-wallet-dropdown');
+                        if (dropdown) {
+                            dropdown.style.display = 'flex';
+                            const arrow = document.getElementById('header-wallet-arrow');
+                            if (arrow) arrow.textContent = '▲';
+                            showHeaderTopUpInput();
+                        }
+                        return;
+                    }
+                }
                 toggleHotkeyGroupVisibility(e.target.checked);
             };
         }
         window.aiEnabled = aiEnabled;
+
+        // Model & voice binding
+        if (data.selectedTextModel) {
+            const modelField = document.getElementById('pref-ai-model');
+            if (modelField) modelField.value = data.selectedTextModel;
+        }
+        if (data.ttsServiceType) {
+            const ttsField = document.getElementById('pref-tts-service');
+            if (ttsField) ttsField.value = data.ttsServiceType;
+            window.ttsServiceType = data.ttsServiceType;
+        }
+        if (data.selectedTtsVoice) {
+            window.selectedTtsVoice = data.selectedTtsVoice;
+        }
+        populateTtsVoices(data.ttsServiceType || 'LOCAL', data.selectedTtsVoice);
+
+        // Load balance to header
+        const val = (data.creditBalance !== undefined) ? data.creditBalance.toFixed(2) : '0.00';
+        const acc = (data.accumulatedCharges !== undefined) ? data.accumulatedCharges.toFixed(2) : '0.00';
+        
+        const headerBal = document.getElementById('header-wallet-balance');
+        if (headerBal) headerBal.textContent = val;
+        
+        const dropdownBal = document.getElementById('dropdown-wallet-balance');
+        if (dropdownBal) dropdownBal.textContent = val;
+        
+        const dropdownAcc = document.getElementById('dropdown-accrued-charges');
+        if (dropdownAcc) dropdownAcc.textContent = acc;
+        
+        loadAiUsageStats();
     })
     .catch(error => {
         console.error("Error loading preferences:", error);
@@ -566,6 +803,23 @@ function savePreferences(event) {
     const token = localStorage.getItem('jwtToken');
     if (!token) return;
 
+    const aiEnabledVal = document.getElementById('pref-ai-enabled').checked;
+    if (aiEnabledVal) {
+        const balance = parseFloat(document.getElementById('header-wallet-balance')?.textContent || '0.00');
+        if (balance < 5.00) {
+            showToast({
+                type: 'WARNING',
+                severity: 'WARNING',
+                message: 'Cannot enable AI features. Wallet balance must be at least $5.00.'
+            });
+            document.getElementById('pref-ai-enabled').checked = false;
+            if (typeof toggleHotkeyGroupVisibility === 'function') {
+                toggleHotkeyGroupVisibility(false);
+            }
+            return;
+        }
+    }
+
     const payload = {
         tireOverheatTemp: parseFloat(document.getElementById('pref-tire-temp').value),
         brakeOverheatTemp: parseFloat(document.getElementById('pref-brake-temp').value),
@@ -575,7 +829,10 @@ function savePreferences(event) {
         udpPort: parseInt(document.getElementById('pref-udp-port').value, 10),
         voiceHotkey: currentVoiceHotkey,
         voiceHotkeyLabel: currentVoiceHotkeyLabel,
-        aiEnabled: document.getElementById('pref-ai-enabled').checked
+        aiEnabled: aiEnabledVal,
+        selectedTextModel: document.getElementById('pref-ai-model').value,
+        ttsServiceType: document.getElementById('pref-tts-service').value,
+        selectedTtsVoice: document.getElementById('pref-tts-voice').value
     };
 
     fetch('/api/preferences', {
@@ -592,11 +849,20 @@ function savePreferences(event) {
     })
     .then(data => {
         window.aiEnabled = data.aiEnabled === true;
+        window.ttsServiceType = data.ttsServiceType;
+        window.selectedTtsVoice = data.selectedTtsVoice;
+
+        const headerBal = document.getElementById('header-wallet-balance');
+        if (headerBal && data.creditBalance !== undefined) {
+            headerBal.textContent = parseFloat(data.creditBalance).toFixed(2);
+        }
+
         showToast({
             type: 'SUCCESS',
             severity: 'SUCCESS',
             message: 'Engineer preferences saved successfully!'
         });
+        loadAiUsageStats();
     })
     .catch(error => {
         console.error("Error saving preferences:", error);
@@ -807,3 +1073,252 @@ window.addEventListener('keydown', function(event) {
         }
     }
 });
+
+function loadAiUsageStats() {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) return;
+
+    fetch('/api/ai/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const val = (data.creditBalance !== undefined) ? data.creditBalance.toFixed(2) : '0.00';
+        const acc = (data.accumulatedCharges !== undefined) ? data.accumulatedCharges.toFixed(2) : '0.00';
+        
+        const headerBal = document.getElementById('header-wallet-balance');
+        if (headerBal) headerBal.textContent = val;
+        
+        const dropdownBal = document.getElementById('dropdown-wallet-balance');
+        if (dropdownBal) dropdownBal.textContent = val;
+        
+        const dropdownAcc = document.getElementById('dropdown-accrued-charges');
+        if (dropdownAcc) dropdownAcc.textContent = acc;
+    });
+
+    fetch('/api/ai/usage/summary', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(response => {
+        if (!response.ok) return;
+        return response.json();
+    })
+    .then(data => {
+        if (!data) return;
+        const totalCalls = document.getElementById('dropdown-total-calls');
+        const totalCost = document.getElementById('dropdown-total-cost');
+        if (totalCalls) {
+            let calls = 0;
+            if (data.usageByModel) {
+                data.usageByModel.forEach(m => {
+                    const totalCallsVal = m.totalcalls !== undefined ? m.totalcalls : (m.totalCalls !== undefined ? m.totalCalls : 0);
+                    calls += parseInt(totalCallsVal, 10);
+                });
+            }
+            totalCalls.textContent = calls;
+        }
+        if (totalCost) {
+            totalCost.textContent = '$' + parseFloat(data.totalSpent || 0).toFixed(4);
+        }
+    })
+    .catch(err => console.error("Error loading usage stats:", err));
+}
+
+function toggleWalletDropdown(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('header-wallet-dropdown');
+    const arrow = document.getElementById('header-wallet-arrow');
+    if (!dropdown) return;
+    
+    if (dropdown.style.display === 'none' || !dropdown.style.display) {
+        dropdown.style.display = 'flex';
+        if (arrow) arrow.textContent = '▲';
+        loadAiUsageStats();
+    } else {
+        dropdown.style.display = 'none';
+        if (arrow) arrow.textContent = '▼';
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('header-wallet-dropdown');
+    const btn = document.getElementById('header-wallet-btn');
+    if (dropdown && dropdown.style.display === 'flex') {
+        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.style.display = 'none';
+            const arrow = document.getElementById('header-wallet-arrow');
+            if (arrow) arrow.textContent = '▼';
+        }
+    }
+});
+
+function showHeaderTopUpInput(event) {
+    if (event) event.stopPropagation();
+    const container = document.getElementById('header-topup-container');
+    if (container) container.style.display = 'flex';
+}
+
+function cancelHeaderTopUp(event) {
+    if (event) event.stopPropagation();
+    const container = document.getElementById('header-topup-container');
+    if (container) container.style.display = 'none';
+}
+
+function submitHeaderTopUp(event) {
+    if (event) event.stopPropagation();
+    const input = document.getElementById('header-topup-amount');
+    if (!input) return;
+    
+    const amount = parseFloat(input.value);
+    if (isNaN(amount) || amount < 5.00) {
+        showToast({
+            type: 'WARNING',
+            severity: 'WARNING',
+            message: 'Minimum top up amount is $5.00'
+        });
+        return;
+    }
+
+    const token = localStorage.getItem('jwtToken');
+    if (!token) return;
+
+    // Create Order on Backend first
+    fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ amount: amount })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Order creation failed");
+        return response.json();
+    })
+    .then(orderData => {
+        // Launch Razorpay standard checkout popup
+        const options = {
+            "key": orderData.keyId,
+            "amount": orderData.amount,
+            "currency": orderData.currency,
+            "name": "F1 Race Engineer",
+            "description": `Wallet top up - $${amount.toFixed(2)} USD`,
+            "order_id": orderData.orderId,
+            "handler": function (response) {
+                // Payment authenticated successfully, verify signature on backend
+                verifyPaymentSignature(
+                    response.razorpay_payment_id,
+                    response.razorpay_order_id,
+                    response.razorpay_signature,
+                    amount,
+                    token
+                );
+            },
+            "prefill": {
+                "name": "Driver",
+                "email": "driver@f1telemetry.com",
+                "contact": "9999999999"
+            },
+            "theme": {
+                "color": "#3b82f6"
+            }
+        };
+        const rzp = new Razorpay(options);
+        rzp.open();
+        cancelHeaderTopUp();
+    })
+    .catch(err => {
+        showToast({
+            type: 'ERROR',
+            severity: 'CRITICAL',
+            message: 'Failed to initialize payment gateway.'
+        });
+    });
+}
+
+function verifyPaymentSignature(paymentId, orderId, signature, usdAmount, token) {
+    fetch('/api/payments/verify-payment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            razorpay_payment_id: paymentId,
+            razorpay_order_id: orderId,
+            razorpay_signature: signature,
+            usdAmount: usdAmount
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Verification failed");
+        return response.json();
+    })
+    .then(data => {
+        showToast({
+            type: 'SUCCESS',
+            severity: 'SUCCESS',
+            message: `Payment successful! Topped up wallet by $${usdAmount.toFixed(2)}.`
+        });
+        loadAiUsageStats();
+    })
+    .catch(err => {
+        showToast({
+            type: 'ERROR',
+            severity: 'CRITICAL',
+            message: 'Failed to verify payment with gateway.'
+        });
+    });
+}
+
+function payAccruedCharges(event) {
+    if (event) event.stopPropagation();
+    const token = localStorage.getItem('jwtToken');
+    if (!token) return;
+
+    const accruedText = document.getElementById('dropdown-accrued-charges')?.textContent || '0.00';
+    const accrued = parseFloat(accruedText);
+    if (accrued <= 0) {
+        showToast({
+            type: 'INFO',
+            severity: 'INFO',
+            message: 'No outstanding accrued charges to pay.'
+        });
+        return;
+    }
+
+    fetch('/api/ai/billing/pay', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(response => {
+        if (response.status === 402) {
+            throw new Error("Insufficient credits in wallet to pay accrued charges.");
+        }
+        if (!response.ok) throw new Error("Payment failed");
+        return response.json();
+    })
+    .then(data => {
+        showToast({
+            type: 'SUCCESS',
+            severity: 'SUCCESS',
+            message: 'Outstanding accrued charges paid successfully!'
+        });
+        loadAiUsageStats();
+    })
+    .catch(err => {
+        showToast({
+            type: 'ERROR',
+            severity: 'CRITICAL',
+            message: err.message || 'Failed to process payment.'
+        });
+    });
+}
+
+// Bind billing functions to window scope for HTML onclick events
+window.toggleWalletDropdown = toggleWalletDropdown;
+window.showHeaderTopUpInput = showHeaderTopUpInput;
+window.cancelHeaderTopUp = cancelHeaderTopUp;
+window.submitHeaderTopUp = submitHeaderTopUp;
+window.payAccruedCharges = payAccruedCharges;

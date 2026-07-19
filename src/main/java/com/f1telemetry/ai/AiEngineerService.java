@@ -14,8 +14,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import com.f1telemetry.domain.User;
+
 /**
- * Core AI service — calls the Gemini 2.0 Flash API to generate
+ * Core AI service — calls the Gemini 2.0/1.5 API to generate
  * engineer-style insights from telemetry data.
  *
  * Uses Java 11+ HttpClient (no extra dependency).
@@ -25,29 +28,52 @@ import java.time.Duration;
 @Service
 public class AiEngineerService {
 
-    @Value("${gemini.api.model:gemini-1.5-flash}")
+    @Value("${gemini.api.model:gemini-3.1-flash-lite}")
     private String modelName;
-
-    private String getApiUrl() {
-        return "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent";
-    }
-
-    public String getModelName() {
-        return modelName;
-    }
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final com.f1telemetry.service.ActiveUserService activeUserService;
+    private final com.f1telemetry.service.AiPricingService pricingService;
+    private final com.f1telemetry.repository.AiUsageRecordRepository usageRepository;
+    private final com.f1telemetry.repository.UserPreferenceRepository preferenceRepository;
 
-    @Value("${gemini.api.key:}")
-    private String apiKey;
-
-    public AiEngineerService() {
+    @Autowired
+    public AiEngineerService(com.f1telemetry.service.ActiveUserService activeUserService,
+                             com.f1telemetry.service.AiPricingService pricingService,
+                             com.f1telemetry.repository.AiUsageRecordRepository usageRepository,
+                             com.f1telemetry.repository.UserPreferenceRepository preferenceRepository) {
+        this.activeUserService = activeUserService;
+        this.pricingService = pricingService;
+        this.usageRepository = usageRepository;
+        this.preferenceRepository = preferenceRepository;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         this.objectMapper = new ObjectMapper();
     }
+
+    private String getApiUrl(String selectedModel) {
+        return "https://generativelanguage.googleapis.com/v1beta/models/" + selectedModel + ":generateContent";
+    }
+
+    public String getModelName() {
+        User activeUser = activeUserService.getActiveUser();
+        if (activeUser != null) {
+            try {
+                com.f1telemetry.domain.UserPreference prefs = preferenceRepository.findByUser(activeUser).orElse(null);
+                if (prefs != null && prefs.getSelectedTextModel() != null) {
+                    return prefs.getSelectedTextModel();
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return modelName;
+    }
+
+    @Value("${gemini.api.key:}")
+    private String apiKey;
 
     /**
      * Returns true if the Gemini API key is configured.
@@ -115,6 +141,8 @@ public class AiEngineerService {
             return null;
         }
 
+        String modelToUse = getModelName();
+
         try {
             // Build the Gemini request payload
             ObjectNode requestBody = objectMapper.createObjectNode();
@@ -132,7 +160,7 @@ public class AiEngineerService {
             String requestJson = objectMapper.writeValueAsString(requestBody);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(getApiUrl()))
+                    .uri(URI.create(getApiUrl(modelToUse)))
                     .header("Content-Type", "application/json")
                     .header("X-goog-api-key", apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
@@ -159,9 +187,26 @@ public class AiEngineerService {
                 return null;
             }
 
+            // Extract usageMetadata
+            JsonNode usageNode = root.path("usageMetadata");
+            int inputTokens = usageNode.path("promptTokenCount").asInt(0);
+            int outputTokens = usageNode.path("candidatesTokenCount").asInt(0);
+
             String result = text.asText().trim();
             log.info("[AI] {} response ({} chars): {}", context, result.length(),
                     result.length() > 120 ? result.substring(0, 120) + "..." : result);
+
+            // Record usage in DB if user is present
+            User activeUser = activeUserService.getActiveUser();
+            if (activeUser != null) {
+                double cost = pricingService.calculateTextCost(modelToUse, inputTokens, outputTokens);
+                usageRepository.save(new com.f1telemetry.domain.AiUsageRecord(
+                    activeUser, System.currentTimeMillis(), modelToUse, context,
+                    inputTokens, outputTokens, "TOKENS", cost
+                ));
+                pricingService.accrueCharges(activeUser, cost);
+            }
+
             return result;
 
         } catch (Exception e) {

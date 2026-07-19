@@ -34,6 +34,7 @@ public class CarState {
     private short sector;
     private long lastLapTimeInMS;
     private long currentLapTimeInMS;
+    private long bestLapTimeInMS;
     private int sector1TimeInMS;
     private int sector2TimeInMS;
 
@@ -47,6 +48,19 @@ public class CarState {
     private float[] tyreWear = new float[4];
     private short frontLeftWingDamage;
     private short frontRightWingDamage;
+
+    // Participant details
+    private String name;
+    private short teamId;
+
+    // Completed lap sector times and personal bests tracked on the backend
+    private int lastLapSector1TimeInMS;
+    private int lastLapSector2TimeInMS;
+    private int lastLapSector3TimeInMS;
+    private int bestSector1TimeInMS;
+    private int bestSector2TimeInMS;
+    private int bestSector3TimeInMS;
+    private short resultStatus;
 
     public CarState(int index) {
         this.carIndex = index;

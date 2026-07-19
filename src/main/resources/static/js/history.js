@@ -1,3 +1,5 @@
+let currentActiveSessionId = null;
+
 async function loadSessions() {
     const list = document.getElementById('session-list');
     list.innerHTML = '<li>Loading...</li>';
@@ -123,10 +125,10 @@ async function deleteSession(sessionId) {
         loadSessions();
         
         // Reset lap details view if details for this session were currently loaded
-        const lapTitle = document.getElementById('lap-details-title');
-        if (lapTitle && lapTitle.textContent.includes(sessionId)) {
-            lapTitle.textContent = 'Select a session';
-            document.getElementById('lap-table-body').innerHTML = '<tr><td colspan="5">Select a session to view lap details.</td></tr>';
+        if (currentActiveSessionId === sessionId) {
+            currentActiveSessionId = null;
+            document.getElementById('lap-details-title').textContent = 'Select a session';
+            document.getElementById('lap-table-body').innerHTML = '<tr><td colspan="7">Select a session to view lap details.</td></tr>';
             document.getElementById('telemetry-chart-container').style.display = 'none';
         }
     } catch (e) {
@@ -136,6 +138,7 @@ async function deleteSession(sessionId) {
 }
 
 async function loadLapDetails(sessionId, trackName) {
+    currentActiveSessionId = sessionId;
     document.getElementById('lap-details-title').textContent = `Laps for ${trackName}`;
     const tbody = document.getElementById('lap-table-body');
     tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
