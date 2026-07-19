@@ -83,6 +83,41 @@ h1 {
 }
 
 /* Grid Layouts */
+
+/* Unified live dashboard: 3 columns [left telemetry | center track/leaderboard | right stats] */
+.unified-dashboard-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr 400px;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    height: calc(100vh - 120px);
+}
+
+.unified-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.unified-center-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.unified-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Keep old class names for backward compat */
 .live-dashboard-grid {
     display: grid;
     grid-template-columns: 1.1fr 2fr 1.1fr;
@@ -129,22 +164,22 @@ h1 {
     border-radius: 4px;
     overflow: hidden;
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     letter-spacing: 0.5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .driver-badge-pos {
     background: rgba(0, 0, 0, 0.05);
     color: var(--text-main);
-    padding: 2px 6px;
-    min-width: 24px;
+    padding: 3px 8px;
+    min-width: 28px;
     text-align: center;
 }
 
 .driver-badge-abbr {
     color: #ffffff;
-    padding: 2px 8px;
+    padding: 3px 10px;
     text-transform: uppercase;
 }
 
@@ -154,8 +189,9 @@ h1 {
     background: rgba(124, 58, 237, 0.08);
     border: 1px solid rgba(124, 58, 237, 0.15);
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 3px 8px;
     font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .sector-green {
@@ -163,8 +199,9 @@ h1 {
     background: rgba(21, 128, 61, 0.08);
     border: 1px solid rgba(21, 128, 61, 0.15);
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 3px 8px;
     font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .sector-yellow {
@@ -172,8 +209,9 @@ h1 {
     background: rgba(180, 83, 9, 0.08);
     border: 1px solid rgba(180, 83, 9, 0.15);
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 3px 8px;
     font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .sector-normal {
@@ -188,9 +226,9 @@ h1 {
     align-items: center;
     background: #f8fafc;
     border: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 6px 10px;
+    padding: 7px 12px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.96rem;
     transition: transform 0.1s ease;
 }
 
@@ -201,17 +239,20 @@ h1 {
 .sector-best-rank {
     font-weight: 800;
     color: var(--text-dim);
-    margin-right: 6px;
+    margin-right: 8px;
+    font-size: 0.96rem;
 }
 
 .sector-best-driver {
     font-weight: 700;
     flex: 1;
+    font-size: 0.96rem;
 }
 
 .sector-best-time {
     font-weight: 800;
     font-family: monospace;
+    font-size: 0.96rem;
 }
 
 .panel {
@@ -677,10 +718,10 @@ h2 {
 
 /* Session Event Log integrated styles */
 .event-log-header {
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: rgba(0, 0, 0, 0.02);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     letter-spacing: 1px;
     color: var(--text-dim);
     font-weight: 800;
@@ -697,9 +738,9 @@ h2 {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 11px 16px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    font-size: 0.9rem;
+    font-size: 1rem;
     animation: logEntryIn 0.3s ease-out forwards;
 }
 
@@ -708,8 +749,8 @@ h2 {
 }
 
 .event-log-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     margin-top: 5px;
     flex-shrink: 0;
@@ -735,12 +776,13 @@ h2 {
 
 .event-log-text {
     flex: 1;
-    line-height: 1.4;
+    line-height: 1.45;
     font-weight: 600;
+    font-size: 1rem;
 }
 
 .event-log-time {
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;

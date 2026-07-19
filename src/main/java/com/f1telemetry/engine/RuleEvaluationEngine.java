@@ -104,6 +104,7 @@ public class RuleEvaluationEngine {
     private short lastSeenSector = -1;
     private int bestSector1TimeMs = Integer.MAX_VALUE;
     private int bestSector2TimeMs = Integer.MAX_VALUE;
+    private int bestSector3TimeMs = Integer.MAX_VALUE;
 
     public List<AlertEvent> evaluate(LiveSessionState state, UserPreference prefs) {
         List<AlertEvent> alerts = new ArrayList<>();
@@ -250,10 +251,11 @@ public class RuleEvaluationEngine {
         });
     }
 
-    private void initializeBestSectorTimes(RaceSession session) {
+    private void initializeBestSectorTimes(RaceSession session, LiveSessionState state) {
         if (session == null) {
             bestSector1TimeMs = Integer.MAX_VALUE;
             bestSector2TimeMs = Integer.MAX_VALUE;
+            bestSector3TimeMs = Integer.MAX_VALUE;
             return;
         }
         try {
@@ -268,8 +270,33 @@ public class RuleEvaluationEngine {
                 .mapToInt(LapTimeRecord::getSector2TimeInMS)
                 .min()
                 .orElse(Integer.MAX_VALUE);
-            log.info("Initialized best sectors for session {}: S1={}ms, S2={}ms", 
-                     session.getSessionId(), bestSector1TimeMs, bestSector2TimeMs);
+            bestSector3TimeMs = laps.stream()
+                .filter(l -> l.getSector3TimeInMS() > 0)
+                .mapToInt(LapTimeRecord::getSector3TimeInMS)
+                .min()
+                .orElse(Integer.MAX_VALUE);
+
+            // Sync with LiveSessionState so dashboard/timing lists match database personal bests
+            if (state != null) {
+                int playerIdx = state.getPlayerCarIndex();
+                if (playerIdx >= 0 && playerIdx < state.getCars().length) {
+                    com.f1telemetry.state.CarState playerCar = state.getCars()[playerIdx];
+                    if (playerCar != null) {
+                        if (bestSector1TimeMs != Integer.MAX_VALUE) {
+                            playerCar.setBestSector1TimeInMS(bestSector1TimeMs);
+                        }
+                        if (bestSector2TimeMs != Integer.MAX_VALUE) {
+                            playerCar.setBestSector2TimeInMS(bestSector2TimeMs);
+                        }
+                        if (bestSector3TimeMs != Integer.MAX_VALUE) {
+                            playerCar.setBestSector3TimeInMS(bestSector3TimeMs);
+                        }
+                    }
+                }
+            }
+
+            log.info("Initialized best sectors for session {}: S1={}ms, S2={}ms, S3={}ms", 
+                     session.getSessionId(), bestSector1TimeMs, bestSector2TimeMs, bestSector3TimeMs);
         } catch (Exception e) {
             log.error("Error initializing best sector times", e);
         }
@@ -294,7 +321,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
-                initializeBestSectorTimes(session);
+                initializeBestSectorTimes(session, state);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -318,7 +345,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
-                initializeBestSectorTimes(session);
+                initializeBestSectorTimes(session, state);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -340,7 +367,7 @@ public class RuleEvaluationEngine {
 
             RaceSession session = createOrGetSession(state);
             if (session != null) {
-                initializeBestSectorTimes(session);
+                initializeBestSectorTimes(session, state);
                 Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
                 if (maxLapNum != null) {
                     currentLapOffset = maxLapNum;
@@ -385,6 +412,8 @@ public class RuleEvaluationEngine {
             // If the completed lap updated sector records, verify them
             if (cachedS1 > 0 && cachedS1 < bestSector1TimeMs) bestSector1TimeMs = cachedS1;
             if (cachedS2 > 0 && cachedS2 < bestSector2TimeMs) bestSector2TimeMs = cachedS2;
+            int s3 = (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2;
+            if (s3 > 0 && s3 < bestSector3TimeMs) bestSector3TimeMs = s3;
 
             lastSeenLap = playerCar.getCurrentLapNum();
             cachedS1 = 0;
@@ -491,6 +520,25 @@ public class RuleEvaluationEngine {
                     if (s1 == 0) s1 = cachedS1;
                     if (s2 == 0) s2 = cachedS2;
                     
+                    int s3 = (int) playerCar.getLastLapTimeInMS() - s1 - s2;
+                    if (s3 < 0) s3 = 0;
+                    
+                    // Update playerCar personal bests in memory so live state is correct
+                    if (s1 > 0 && (playerCar.getBestSector1TimeInMS() == 0 || s1 < playerCar.getBestSector1TimeInMS())) {
+                        playerCar.setBestSector1TimeInMS(s1);
+                    }
+                    if (s2 > 0 && (playerCar.getBestSector2TimeInMS() == 0 || s2 < playerCar.getBestSector2TimeInMS())) {
+                        playerCar.setBestSector2TimeInMS(s2);
+                    }
+                    if (s3 > 0 && (playerCar.getBestSector3TimeInMS() == 0 || s3 < playerCar.getBestSector3TimeInMS())) {
+                        playerCar.setBestSector3TimeInMS(s3);
+                    }
+                    
+                    // Set final completed lap's sector times in memory
+                    playerCar.setLastLapSector1TimeInMS(s1);
+                    playerCar.setLastLapSector2TimeInMS(s2);
+                    playerCar.setLastLapSector3TimeInMS(s3);
+                    
                     saveLapRecord((short) completedLapDbNum, s1, s2, (int) playerCar.getLastLapTimeInMS(), state);
                 }
             }
@@ -516,6 +564,7 @@ public class RuleEvaluationEngine {
         this.lastSeenSector = -1;
         this.bestSector1TimeMs = Integer.MAX_VALUE;
         this.bestSector2TimeMs = Integer.MAX_VALUE;
+        this.bestSector3TimeMs = Integer.MAX_VALUE;
     }
 
     // ── Public lookup helpers ─────────────────────────────────────────

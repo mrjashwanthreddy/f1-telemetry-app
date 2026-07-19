@@ -57,7 +57,6 @@
             <h1>F1 RACE ENGINEER</h1>
             <nav class="tabs">
                 <button class="tab-btn active" onclick="switchTab('live-tab', this)">Live Dashboard</button>
-                <button class="tab-btn" onclick="switchTab('standings-tab', this)">Standings</button>
                 <button class="tab-btn" onclick="switchTab('history-tab', this)">Session History</button>
                 <button class="tab-btn" onclick="switchTab('settings-tab', this)">Engineer Settings</button>
             </nav>
@@ -139,286 +138,202 @@
         <div id="toast-container" class="toast-container"></div>
 
 
-        <!-- Live Dashboard Tab -->
-        <main id="live-tab" class="tab-content active live-dashboard-grid">
-            <!-- Left Column: Pedals & Steering -->
-            <section class="panel inputs-panel">
-                <h2>INPUTS</h2>
-                <div
-                    style="display:flex; justify-content:center; align-items:center; margin: 15px 0 25px 0; position:relative;">
-                    <div id="steering-wheel-hud"
-                        style="width: 100px; height: 100px; border-radius: 50%; border: 10px solid #1e293b; border-top: 10px solid var(--accent-blue); position: relative; transition: transform 0.05s linear; box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);">
-                        <div
-                            style="width:26px; height:26px; border-radius:50%; background:#0f172a; border:3px solid var(--accent-blue); position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:flex; justify-content:center; align-items:center; font-size:0.5rem; font-weight:700; color:#fff;">
-                            F1</div>
-                        <div
-                            style="position:absolute; top:50%; left:10px; right:10px; height:6px; background:#1e293b; transform:translateY(-50%);">
+        <!-- Unified Live Dashboard Tab -->
+        <main id="live-tab" class="tab-content active unified-dashboard-grid">
+
+            <!-- LEFT COLUMN: Inputs + RPM/Speed/Gear + Race Status/Tyres -->
+            <div class="unified-left-col">
+
+                <!-- Inputs Panel -->
+                <section class="panel inputs-panel" style="flex-shrink: 0;">
+                    <h2>INPUTS</h2>
+                    <div style="display:flex; justify-content:center; align-items:center; margin: 10px 0 15px 0; position:relative;">
+                        <div id="steering-wheel-hud"
+                            style="width: 80px; height: 80px; border-radius: 50%; border: 8px solid #1e293b; border-top: 8px solid var(--accent-blue); position: relative; transition: transform 0.05s linear; box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);">
+                            <div
+                                style="width:22px; height:22px; border-radius:50%; background:#0f172a; border:3px solid var(--accent-blue); position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:flex; justify-content:center; align-items:center; font-size:0.45rem; font-weight:700; color:#fff;">
+                                F1</div>
+                            <div
+                                style="position:absolute; top:50%; left:8px; right:8px; height:5px; background:#1e293b; transform:translateY(-50%);"></div>
                         </div>
                     </div>
-                </div>
-                <div class="bars">
-                    <div class="bar-container">
-                        <div class="label">THR</div>
-                        <div class="bar-bg">
-                            <div id="throttle-bar" class="bar-fill throttle"></div>
+                    <div class="bars">
+                        <div class="bar-container">
+                            <div class="label">THR</div>
+                            <div class="bar-bg"><div id="throttle-bar" class="bar-fill throttle"></div></div>
+                            <div id="throttle-val" class="value">0%</div>
                         </div>
-                        <div id="throttle-val" class="value">0%</div>
-                    </div>
-                    <div class="bar-container">
-                        <div class="label">BRK</div>
-                        <div class="bar-bg">
-                            <div id="brake-bar" class="bar-fill brake"></div>
+                        <div class="bar-container">
+                            <div class="label">BRK</div>
+                            <div class="bar-bg"><div id="brake-bar" class="bar-fill brake"></div></div>
+                            <div id="brake-val" class="value">0%</div>
                         </div>
-                        <div id="brake-val" class="value">0%</div>
+                        <div class="bar-container">
+                            <div class="label">STR</div>
+                            <div style="flex: 1; height: 16px; background-color: rgba(0,0,0,0.4); border-radius: 8px; position: relative; border: 1px solid rgba(255,255,255,0.05); padding: 2px;">
+                                <div id="steer-marker" style="position: absolute; top: 2px; left: 50%; width: 10px; height: 10px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 10px rgba(59,130,246,0.6);"></div>
+                            </div>
+                            <div id="steer-val" class="value">0°</div>
+                        </div>
                     </div>
-                    <div class="bar-container">
-                        <div class="label">STR</div>
-                        <div
-                            style="flex: 1; height: 16px; background-color: rgba(0, 0, 0, 0.4); border-radius: 8px; position: relative; border: 1px solid rgba(255, 255, 255, 0.05); padding: 2px;">
-                            <div id="steer-marker"
-                                style="position: absolute; top: 2px; left: 50%; width: 10px; height: 10px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);">
+                </section>
+
+                <!-- RPM / Speed / Gear Panel -->
+                <section class="panel core-panel" style="flex-shrink: 0;">
+                    <div class="rpm-display">
+                        <div id="rpm-val" class="rpm-value">00000</div>
+                        <div class="rpm-label">RPM</div>
+                    </div>
+                    <div class="rev-bar-container">
+                        <div id="rev-bar" class="rev-bar-fill"></div>
+                    </div>
+                    <div class="speed-gear-row">
+                        <div class="speed-display">
+                            <div id="speed-val" class="speed-value">0</div>
+                            <div class="unit">KM/H</div>
+                        </div>
+                        <div class="gear-display">
+                            <div id="gear-val" class="gear-value">N</div>
+                            <div class="unit">GEAR</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Race Status + Tyres + Wing Damage -->
+                <section class="panel status-panel" style="flex: 1; min-height: 0; overflow-y: auto;">
+                    <h2>RACE STATUS</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box"><div class="stat-label">LAP</div><div id="lap-num" class="stat-value">-</div></div>
+                        <div class="stat-box"><div class="stat-label">POSITION</div><div id="position" class="stat-value">P-</div></div>
+                        <div class="stat-box"><div class="stat-label">FUEL</div><div id="fuel" class="stat-value">0.0L</div></div>
+                        <div class="stat-box"><div class="stat-label">ERS</div><div id="ers" class="stat-value">0%</div></div>
+                        <div class="stat-box"><div class="stat-label">LAP TIME</div><div id="lap-time" class="stat-value">0:00.000</div></div>
+                        <div class="stat-box"><div class="stat-label">COMPOUND</div><div id="tyre-compound" class="stat-value" style="font-size: 1.4rem; line-height: 2rem; font-weight: 800;">DRY</div></div>
+                    </div>
+
+                    <h2 style="margin-top: 14px;">TYRES &amp; DAMAGE</h2>
+                    <div class="tyres-grid">
+                        <div class="tyre-box"><div class="tyre-label">FL</div><div id="temp-fl" class="tyre-temp">0°C</div><div class="wear-bar-bg"><div id="wear-fl" class="wear-bar-fill"></div></div></div>
+                        <div class="tyre-box"><div class="tyre-label">FR</div><div id="temp-fr" class="tyre-temp">0°C</div><div class="wear-bar-bg"><div id="wear-fr" class="wear-bar-fill"></div></div></div>
+                        <div class="tyre-box"><div class="tyre-label">RL</div><div id="temp-rl" class="tyre-temp">0°C</div><div class="wear-bar-bg"><div id="wear-rl" class="wear-bar-fill"></div></div></div>
+                        <div class="tyre-box"><div class="tyre-label">RR</div><div id="temp-rr" class="tyre-temp">0°C</div><div class="wear-bar-bg"><div id="wear-rr" class="wear-bar-fill"></div></div></div>
+                    </div>
+
+                    <div class="wing-damage-container" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 6px;">
+                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase;">Front Wing Damage</div>
+                        <div style="display: flex; justify-content: space-between; gap: 16px;">
+                            <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim);">FL</span>
+                                <div class="wear-bar-bg" style="flex: 1; height: 7px;"><div id="wing-l-fill" class="wear-bar-fill" style="width: 0%; background-color: var(--accent-green);"></div></div>
+                                <span id="wing-l-val" style="font-size: 0.8rem; font-weight: 700; min-width: 28px; text-align: right;">0%</span>
+                            </div>
+                            <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim);">FR</span>
+                                <div class="wear-bar-bg" style="flex: 1; height: 7px;"><div id="wing-r-fill" class="wear-bar-fill" style="width: 0%; background-color: var(--accent-green);"></div></div>
+                                <span id="wing-r-val" style="font-size: 0.8rem; font-weight: 700; min-width: 28px; text-align: right;">0%</span>
                             </div>
                         </div>
-                        <div id="steer-val" class="value">0°</div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
 
-            <!-- Center Column: Core Telemetry -->
-            <section class="panel core-panel">
-                <div class="rpm-display">
-                    <div id="rpm-val" class="rpm-value">00000</div>
-                    <div class="rpm-label">RPM</div>
-                </div>
+            <!-- CENTER COLUMN: Live Track Progress + Leaderboard -->
+            <div class="unified-center-col">
+                <section class="panel standings-left-panel" style="display: flex; flex-direction: column; min-height: 0; height: 100%; padding: 12px 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h2>LIVE TRACK PROGRESS</h2>
+                        <div id="leaderboard-summary" style="font-size:0.8rem; font-weight:700; color:var(--text-dim);">Active Cars: 0 | Safety Car: OFF</div>
+                    </div>
 
-                <div class="rev-bar-container">
-                    <div id="rev-bar" class="rev-bar-fill"></div>
-                </div>
-
-                <div class="speed-gear-row">
-                    <div class="speed-display">
-                        <div id="speed-val" class="speed-value">0</div>
-                        <div class="unit">KM/H</div>
-                    </div>
-                    <div class="gear-display">
-                        <div id="gear-val" class="gear-value">N</div>
-                        <div class="unit">GEAR</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Right Column: Status & Tires -->
-            <section class="panel status-panel">
-                <h2>RACE STATUS</h2>
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-label">LAP</div>
-                        <div id="lap-num" class="stat-value">-</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">POSITION</div>
-                        <div id="position" class="stat-value">P-</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">FUEL</div>
-                        <div id="fuel" class="stat-value">0.0L</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">ERS</div>
-                        <div id="ers" class="stat-value">0%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">LAP TIME</div>
-                        <div id="lap-time" class="stat-value">0:00.000</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">COMPOUND</div>
-                        <div id="tyre-compound" class="stat-value"
-                            style="font-size: 1.6rem; line-height: 2.2rem; font-weight: 800;">DRY</div>
-                    </div>
-                </div>
-
-                <h2 style="margin-top: 20px;">TYRES & DAMAGE</h2>
-                <div class="tyres-grid">
-                    <!-- FL -->
-                    <div class="tyre-box">
-                        <div class="tyre-label">FL</div>
-                        <div id="temp-fl" class="tyre-temp">0°C</div>
-                        <div class="wear-bar-bg">
-                            <div id="wear-fl" class="wear-bar-fill"></div>
+                    <!-- Horizontal Track Progress Map -->
+                    <div class="track-timeline-container" style="position:relative; margin-bottom:10px; padding: 8px 0;">
+                        <div class="track-timeline-bg" style="position:relative; height:12px; background:linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); border-radius:6px; border:1px solid rgba(255,255,255,0.05); overflow:visible;">
+                            <div class="timeline-sector-line" style="position:absolute; left:33%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
+                            <div class="timeline-sector-line" style="position:absolute; left:66%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
+                            <div id="timeline-markers-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-dim); margin-top:4px;">
+                            <span>START/FINISH</span><span>SECTOR 1</span><span>SECTOR 2</span><span>SECTOR 3</span>
                         </div>
                     </div>
-                    <!-- FR -->
-                    <div class="tyre-box">
-                        <div class="tyre-label">FR</div>
-                        <div id="temp-fr" class="tyre-temp">0°C</div>
-                        <div class="wear-bar-bg">
-                            <div id="wear-fr" class="wear-bar-fill"></div>
-                        </div>
-                    </div>
-                    <!-- RL -->
-                    <div class="tyre-box">
-                        <div class="tyre-label">RL</div>
-                        <div id="temp-rl" class="tyre-temp">0°C</div>
-                        <div class="wear-bar-bg">
-                            <div id="wear-rl" class="wear-bar-fill"></div>
-                        </div>
-                    </div>
-                    <!-- RR -->
-                    <div class="tyre-box">
-                        <div class="tyre-label">RR</div>
-                        <div id="temp-rr" class="tyre-temp">0°C</div>
-                        <div class="wear-bar-bg">
-                            <div id="wear-rr" class="wear-bar-fill"></div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Front Wing Damage visual section -->
-                <div class="wing-damage-container"
-                    style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; gap: 8px;">
-                    <div
-                        style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase;">
-                        Front Wing Damage</div>
-                    <div style="display: flex; justify-content: space-between; gap: 20px;">
-                        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dim);">FL</span>
-                            <div class="wear-bar-bg" style="flex: 1; height: 8px;">
-                                <div id="wing-l-fill" class="wear-bar-fill"
-                                    style="width: 0%; background-color: var(--accent-green);"></div>
+                    <!-- Leaderboard Table -->
+                    <div class="standings-table-wrapper" style="flex:1; min-height:0; overflow-y:auto; border:1px solid var(--panel-border); border-radius:8px; background:#f8fafc;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:1.05rem; table-layout:fixed;">
+                            <colgroup>
+                                <col style="width:6%">
+                                <col style="width:18%">
+                                <col style="width:13%">
+                                <col style="width:13%">
+                                <col style="width:8%">
+                                <col style="width:6%">
+                                <col style="width:8%">
+                                <col style="width:9.3%">
+                                <col style="width:9.3%">
+                                <col style="width:9.4%">
+                            </colgroup>
+                            <thead>
+                                <tr style="position:sticky; top:0; background:#f1f5f9; border-bottom:2px solid var(--panel-border); z-index:10; font-weight:800; color:var(--text-dim);">
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">POS</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">DRIVER</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">LAST LAP</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">BEST LAP</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">TYRE</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">AGE</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">GAP</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S1</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S2</th>
+                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S3</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-rows">
+                                <tr><td colspan="10" style="padding:16px; text-align:center; color:var(--text-dim);">Waiting for live session data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT COLUMN: Fastest Sectors (Top 3) + Session Events -->
+            <div class="unified-right-col">
+
+                <!-- Fastest Sectors -->
+                <section class="panel fastest-sectors-panel" style="flex: none; display: flex; flex-direction: column; padding: 12px 14px;">
+                    <h2>FASTEST SECTORS (TOP 3)</h2>
+                    <div class="sector-tables-grid" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 1</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;" id="s1-fastest-list">
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
                             </div>
-                            <span id="wing-l-val"
-                                style="font-size: 0.85rem; font-weight: 700; min-width: 30px; text-align: right;">0%</span>
                         </div>
-                        <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-dim);">FR</span>
-                            <div class="wear-bar-bg" style="flex: 1; height: 8px;">
-                                <div id="wing-r-fill" class="wear-bar-fill"
-                                    style="width: 0%; background-color: var(--accent-green);"></div>
+                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 2</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;" id="s2-fastest-list">
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
                             </div>
-                            <span id="wing-r-val"
-                                style="font-size: 0.85rem; font-weight: 700; min-width: 30px; text-align: right;">0%</span>
+                        </div>
+                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 3</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;" id="s3-fastest-list">
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-        </main>
-
-        <!-- Real-Time Standings Tab -->
-        <main id="standings-tab" class="tab-content standings-grid" style="display: none; height: calc(100vh - 120px);">
-            <!-- Left Side: Leaderboard Table & Timeline -->
-            <section class="panel standings-left-panel" style="display: flex; flex-direction: column; min-height: 0; padding: 12px 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <h2>LIVE TRACK PROGRESS & STANDINGS</h2>
-                    <div id="leaderboard-summary" style="font-size:0.85rem; font-weight:700; color:var(--text-dim);">
-                        Active Cars: 0 | Safety Car: OFF
-                    </div>
-                </div>
-
-                <!-- Horizontal Track Progress Map -->
-                <div class="track-timeline-container" style="position:relative; margin-bottom:12px; padding: 10px 0;">
-                    <div class="track-timeline-bg"
-                        style="position:relative; height:12px; background:linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); border-radius:6px; border:1px solid rgba(255,255,255,0.05); overflow:visible;">
-                        <!-- Sector markers inside the track timeline -->
-                        <div class="timeline-sector-line"
-                            style="position:absolute; left:33%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);">
-                        </div>
-                        <div class="timeline-sector-line"
-                            style="position:absolute; left:66%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);">
-                        </div>
-
-                        <!-- Dynamic Car Markers Container -->
-                        <div id="timeline-markers-container"
-                            style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible;">
-                            <!-- Injected by JS -->
-                        </div>
-                    </div>
-                    <div
-                        style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-dim); margin-top:4px;">
-                        <span>START/FINISH</span>
-                        <span>SECTOR 1</span>
-                        <span>SECTOR 2</span>
-                        <span>SECTOR 3</span>
-                    </div>
-                </div>
-
-                <!-- Leaderboard Table Wrapper -->
-                <div class="standings-table-wrapper"
-                    style="flex:1; min-height:0; overflow-y:auto; border:1px solid var(--panel-border); border-radius:8px; background:#f8fafc;">
-                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.9rem;">
-                        <thead>
-                            <tr
-                                style="position:sticky; top:0; background:#f1f5f9; border-bottom:2px solid var(--panel-border); z-index:10; font-weight:800; color:var(--text-dim);">
-                                <th style="padding:6px 12px; width: 60px;">POS</th>
-                                <th style="padding:6px 12px; width: 150px;">DRIVER</th>
-                                <th style="padding:6px 12px; width: 90px;">LAST LAP</th>
-                                <th style="padding:6px 12px; width: 90px;">BEST LAP</th>
-                                <th style="padding:6px 12px; width: 60px;">TYRE</th>
-                                <th style="padding:6px 12px; width: 50px;">AGE</th>
-                                <th style="padding:6px 12px; width: 70px;">GAP</th>
-                                <th style="padding:6px 12px; width: 90px;">SECTOR 1</th>
-                                <th style="padding:6px 12px; width: 90px;">SECTOR 2</th>
-                                <th style="padding:6px 12px; width: 90px;">SECTOR 3</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboard-rows">
-                            <tr>
-                                <td colspan="10" style="padding:20px; text-align:center; color:var(--text-dim);">
-                                    Waiting for live session data...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Right Side: Session Events & Fastest Sectors (Top 3) -->
-            <section class="standings-right-panel" style="display: flex; flex-direction: column; gap: 12px; min-height: 0;">
-                <!-- Integrated Event Log -->
-                <div class="integrated-event-log panel"
-                    style="flex: 1.2; display:flex; flex-direction:column; min-height:0; border:1px solid var(--panel-border); border-radius:12px; background:#ffffff; overflow:hidden; padding: 0;">
-                    <div class="event-log-header"
-                        style="background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.06); padding:8px 12px; font-size:0.8rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; flex-shrink:0;">
-                        ⚡ Session Events
-                    </div>
-                    <div id="event-log-entries" class="event-log-entries"
-                        style="flex:1; overflow-y:auto; display:flex; flex-direction:column; min-height:0;">
-                        <div class="event-log-entry"
-                            style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">
+                <!-- Session Events -->
+                <section class="integrated-event-log panel" style="flex: 1; display:flex; flex-direction:column; min-height:0; overflow:hidden; padding: 0;">
+                    <div class="event-log-header" style="background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.06); padding:8px 12px; font-size:0.8rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; flex-shrink:0;">⚡ Session Events</div>
+                    <div id="event-log-entries" class="event-log-entries" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; min-height:0;">
+                        <div class="event-log-entry" style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">
                             <div class="event-log-dot info"></div>
                             <div class="event-log-text" style="color: var(--text-dim); font-size:0.85rem;">Waiting for events…</div>
                         </div>
                     </div>
-                </div>
+                </section>
+            </div>
 
-                <!-- Fastest Sectors Tables (Top 3) -->
-                <div class="panel fastest-sectors-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px 18px;">
-                    <h2>FASTEST SECTORS (TOP 3)</h2>
-                    <div class="sector-tables-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; flex: 1; min-height: 0;">
-                        <!-- Sector 1 Fastest -->
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0;">
-                            <div style="font-size: 0.8rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 4px; margin-bottom: 6px; text-align: center;">Sector 1</div>
-                            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;" id="s1-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 10px;">No times</div>
-                            </div>
-                        </div>
-                        <!-- Sector 2 Fastest -->
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0;">
-                            <div style="font-size: 0.8rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 4px; margin-bottom: 6px; text-align: center;">Sector 2</div>
-                            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;" id="s2-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 10px;">No times</div>
-                            </div>
-                        </div>
-                        <!-- Sector 3 Fastest -->
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0;">
-                            <div style="font-size: 0.8rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 4px; margin-bottom: 6px; text-align: center;">Sector 3</div>
-                            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;" id="s3-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 10px;">No times</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
 
         <!-- Session History Tab -->
@@ -634,7 +549,7 @@
             document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
 
-            if (tabId === 'live-tab' || tabId === 'standings-tab') {
+            if (tabId === 'live-tab') {
                 document.getElementById(tabId).style.display = 'grid';
             } else {
                 document.getElementById(tabId).style.display = 'block';

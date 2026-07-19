@@ -52,15 +52,16 @@ public class SessionHistoryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @DeleteMapping("/sessions/{sessionId}")
     public ResponseEntity<Void> deleteSession(@PathVariable String sessionId) {
         return getAuthenticatedUser().flatMap(user -> sessionRepository.findBySessionId(sessionId)
                 .filter(session -> session.getUser().getId().equals(user.getId())))
                 .map(session -> {
-                    // Delete laps manually
+                    // Delete telemetry records FIRST (bulk delete, avoids row-by-row Hibernate conflict)
+                    telemetryRecordRepository.bulkDeleteBySessionId(sessionId);
+                    // Delete laps
                     lapRepository.deleteByRaceSession(session);
-                    // Delete telemetry records
-                    telemetryRecordRepository.deleteBySessionId(sessionId);
                     // Delete the session itself
                     sessionRepository.delete(session);
                     return ResponseEntity.ok().<Void>build();
