@@ -133,6 +133,11 @@ public class RuleEvaluationEngine {
         if (prefs == null)
             return alerts;
 
+        // Silence live alerts (ERS, tires, fuel) once the player has finished the session/race (3=Finished, 4=DNF, etc.)
+        if (playerCar.getResultStatus() >= 3) {
+            return alerts;
+        }
+
         if (now - lastTireAlertTime > 5000) {
             boolean overheating = false;
             short[] temps = playerCar.getTyreSurfaceTemps();
@@ -214,7 +219,29 @@ public class RuleEvaluationEngine {
         final com.f1telemetry.domain.User activeUser = rawUser;
         String dbSessionId = getDbSessionId(state);
 
-        return sessionRepository.findBySessionId(dbSessionId).orElseGet(() -> {
+        return sessionRepository.findBySessionId(dbSessionId).map(session -> {
+            boolean updated = false;
+            String currentTrack = resolveTrackName(state.getTrackId());
+            String currentType = resolveSessionType(state);
+            
+            // If DB track name is Unknown/Melbourne and the packet contains a different valid track, update it
+            if (state.getTrackId() >= 0 && (session.getTrackName() == null || session.getTrackName().startsWith("Unknown") || 
+                (session.getTrackName().equals("Melbourne") && state.getTrackId() != 0))) {
+                session.setTrackName(currentTrack);
+                updated = true;
+            }
+            // Same for session type (Unknown -> Practice, Race, etc.)
+            if (state.getSessionType() != 0 && (session.getSessionType() == null || session.getSessionType().equals("Unknown") || session.getSessionType().startsWith("Unknown"))) {
+                session.setSessionType(currentType);
+                updated = true;
+            }
+            if (updated) {
+                log.info("Updating session details in DB for [{}]: trackName='{}', sessionType='{}'", 
+                         dbSessionId, session.getTrackName(), session.getSessionType());
+                return sessionRepository.save(session);
+            }
+            return session;
+        }).orElseGet(() -> {
             String trackName = resolveTrackName(state.getTrackId());
             String sessionType = resolveSessionType(state);
             log.info("Creating session record in DB: [{}] — {} ({})", dbSessionId, trackName, sessionType);
@@ -249,6 +276,12 @@ public class RuleEvaluationEngine {
     }
 
     private void trackLaps(CarState playerCar, LiveSessionState state, List<AlertEvent> alerts, UserPreference prefs) {
+        if (playerCar.getCurrentLapNum() <= 0) {
+            return; // Ignore menu/out-of-session telemetry
+        }
+        if (playerCar.getResultStatus() >= 3) {
+            return; // Ignore telemetry once player has finished the race (prevents duplicate post-race menu laps)
+        }
         String dbSessionId = getDbSessionId(state);
         String gameSessionId = state.getSessionId();
 

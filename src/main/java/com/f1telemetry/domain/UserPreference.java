@@ -30,6 +30,12 @@ public class UserPreference {
     // AI Toggle settings (defaults to false)
     private Boolean aiEnabled = false;
 
+    private String selectedTextModel = "gemini-3.1-flash-lite";
+    private String ttsServiceType = "LOCAL"; // "LOCAL", "GOOGLE_CLOUD_TTS"
+    private String selectedTtsVoice = "en-GB-Neural2-B";
+    private Double creditBalance = 0.00;
+    private Double accumulatedCharges = 0.00;
+
     public boolean isAiEnabled() {
         return aiEnabled != null ? aiEnabled : false;
     }

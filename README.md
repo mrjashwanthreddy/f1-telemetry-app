@@ -49,6 +49,10 @@ No developer setup is required! You do not need to install Java, Maven, Docker, 
 * **Interactive Chart.js Post-Race Analytics**: Visualizes historical lap data with multi-axis graphs comparing Speed, RPM, Throttle, and Brake traces.
 * **Zoom-Proof & Responsive Layout**: Responsive media queries and auto-shrink height boundaries adapt to any browser zoom settings or secondary screen sizes. If the window height is constrained, columns stack vertically and scroll internally without clipping.
 * **Secure Key Injection CI/CD Pipeline:** The GitHub Actions release workflow automatically bakes in your Action secrets (`GEMINI_KEY`) at packaging compile-time, keeping keys hidden from the public repository history.
+* **Seamless Auto-Updater ("Check for Updates")**: Integrated an automated desktop updater. It queries the GitHub Releases API on startup, displays interactive release notes, downloads, extracts, and restarts the application automatically in under 0.5s by skipping static JRE runtime files.
+* **Configurable & Hot-Swappable UDP Ports**: Users can customize the UDP host address and port directly from the settings panel. Changes are saved to PostgreSQL and applied on-the-fly without requiring a restart.
+* **Modern Premium Settings HUD**: Replaced plain settings grids with a high-density panel featuring real-time connection status logs, customizable voice engineer hotkey bindings, and a custom gradient-orange action button matching the race HUD.
+* **Clean App-Image Packaging & Icon**: Standalone Windows executables (`F1Telemetry.exe`) are bundled with the custom F1 icon and run in windowed-background mode, hiding the terminal background window.
 
 ---
 

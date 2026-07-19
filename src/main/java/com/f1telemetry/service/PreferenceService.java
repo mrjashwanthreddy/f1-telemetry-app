@@ -30,7 +30,7 @@ public class PreferenceService {
         // Fetch from DB
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         UserPreference pref = preferenceRepository.findByUser(user)
                 .orElseGet(() -> {
                     UserPreference newPref = new UserPreference(user);
@@ -46,7 +46,7 @@ public class PreferenceService {
     public UserPreference updatePreferences(String username, UserPreference updateReq) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-                
+
         UserPreference pref = preferenceRepository.findByUser(user)
                 .orElse(new UserPreference(user));
 
@@ -56,12 +56,24 @@ public class PreferenceService {
         pref.setLowBatteryPercentage(updateReq.getLowBatteryPercentage());
         pref.setVoiceHotkey(updateReq.getVoiceHotkey());
         pref.setVoiceHotkeyLabel(updateReq.getVoiceHotkeyLabel());
-        pref.setAiEnabled(updateReq.isAiEnabled());
+        if (updateReq.isAiEnabled()) {
+            double balance = pref.getCreditBalance() != null ? pref.getCreditBalance() : 0.0;
+            if (balance < 5.00) {
+                pref.setAiEnabled(false);
+            } else {
+                pref.setAiEnabled(true);
+            }
+        } else {
+            pref.setAiEnabled(false);
+        }
         pref.setUdpHost(updateReq.getUdpHost());
         pref.setUdpPort(updateReq.getUdpPort());
+        pref.setSelectedTextModel(updateReq.getSelectedTextModel());
+        pref.setTtsServiceType(updateReq.getTtsServiceType());
+        pref.setSelectedTtsVoice(updateReq.getSelectedTtsVoice());
 
         UserPreference saved = preferenceRepository.save(pref);
-        
+
         // Update cache instantly
         preferencesCache.put(username, saved);
         log.info("Updated preferences for {} in DB and cache", username);
@@ -72,7 +84,11 @@ public class PreferenceService {
         } catch (Exception e) {
             log.error("Failed to restart UDP server dynamically after preference change", e);
         }
-        
         return saved;
+    }
+
+    public void evictCache(String username) {
+        preferencesCache.invalidate(username);
+        log.info("Evicted preferences cache for {}", username);
     }
 }

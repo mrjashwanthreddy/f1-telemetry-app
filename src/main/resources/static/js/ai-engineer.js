@@ -17,8 +17,55 @@ let currentUtterance = null;
  * Speaks text aloud in a British male voice — sounds like an F1 race engineer.
  * Cancels any currently speaking utterance so new messages always play.
  */
-function engineerSpeak(text, urgent = false) {
-    if (window.aiEnabled === false || !ttsEnabled || !window.speechSynthesis) return;
+async function engineerSpeak(text, urgent = false) {
+    if (window.aiEnabled === false || !ttsEnabled) return;
+
+    if (window.ttsServiceType === 'GOOGLE_CLOUD_TTS') {
+        try {
+            const token = localStorage.getItem('jwtToken');
+            const response = await fetch('/api/ai/tts/synthesize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ text, voice: window.selectedTtsVoice })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Update accrued charges on UI
+                const accruedDisplay = document.getElementById('accrued-charges-display');
+                if (accruedDisplay && data.accumulatedCharges !== undefined) {
+                    accruedDisplay.textContent = parseFloat(data.accumulatedCharges).toFixed(2);
+                }
+                if (typeof loadAiUsageStats === 'function') {
+                    loadAiUsageStats();
+                }
+                
+                if (data.useFallbackPlayback) {
+                    // Fall through to local fallback
+                } else if (data.audioContent) {
+                    const audio = new Audio("data:audio/mp3;base64," + data.audioContent);
+                    audio.play();
+                    return;
+                }
+            } else if (response.status === 402) {
+                console.warn("Insufficient credits for Cloud TTS voice.");
+                if (window.showToast) {
+                    window.showToast({
+                        type: 'WARNING',
+                        severity: 'WARNING',
+                        message: 'Insufficient credits for Cloud TTS. Falling back to local voice.'
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Cloud TTS failed, falling back to local voice", e);
+        }
+    }
+
+    if (!window.speechSynthesis) return;
 
     // Cancel in-progress speech so urgent messages cut through
     window.speechSynthesis.cancel();
@@ -29,11 +76,17 @@ function engineerSpeak(text, urgent = false) {
     utterance.pitch = 0.88;                    // Lower pitch = authoritative
     utterance.volume = 0.9;
 
-    // Pick best available English voice — prefer British male
+    // Pick best available English voice
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('male'))
+    let preferred = null;
+    if (window.ttsServiceType === 'LOCAL' && window.selectedTtsVoice) {
+        preferred = voices.find(v => v.name === window.selectedTtsVoice);
+    }
+    if (!preferred) {
+        preferred = voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('male'))
                    || voices.find(v => v.lang === 'en-GB')
                    || voices.find(v => v.lang.startsWith('en'));
+    }
     if (preferred) utterance.voice = preferred;
 
     currentUtterance = utterance;

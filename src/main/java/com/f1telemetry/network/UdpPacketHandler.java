@@ -60,6 +60,8 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             if (header != null && header.getSessionUID() != 0) {
                 String sessionUIDStr = String.valueOf(header.getSessionUID());
                 if (!sessionUIDStr.equals(liveSessionState.getSessionId())) {
+                    log.info("New session detected: [{}]. Resetting live state cache.", sessionUIDStr);
+                    liveSessionState.reset();
                     liveSessionState.setSessionId(sessionUIDStr);
                 }
             }
@@ -135,14 +137,63 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 for (int i = 0; i < 22; i++) {
                     LapData lap = lapData.getLapData()[i];
                     CarState carState = liveSessionState.getCars()[i];
+                    
+                    short oldLap = carState.getCurrentLapNum();
+                    short newLap = lap.getCurrentLapNum();
+                    int s1 = lap.getSector1TimeMinutesPart() * 60000 + lap.getSector1TimeMSPart();
+                    int s2 = lap.getSector2TimeMinutesPart() * 60000 + lap.getSector2TimeMSPart();
+                    
+                    // Track sector times on lap completion
+                    if (newLap > oldLap && oldLap > 0) {
+                        long lastLapTime = lap.getLastLapTimeInMS();
+                        int completedS1 = carState.getSector1TimeInMS();
+                        int completedS2 = carState.getSector2TimeInMS();
+                        
+                        if (lastLapTime > 0 && completedS1 > 0 && completedS2 > 0) {
+                            int completedS3 = (int) lastLapTime - completedS1 - completedS2;
+                            if (completedS3 > 0) {
+                                carState.setLastLapSector1TimeInMS(completedS1);
+                                carState.setLastLapSector2TimeInMS(completedS2);
+                                carState.setLastLapSector3TimeInMS(completedS3);
+                                
+                                // Update driver's personal best sector times
+                                if (carState.getBestSector1TimeInMS() == 0 || completedS1 < carState.getBestSector1TimeInMS()) {
+                                    carState.setBestSector1TimeInMS(completedS1);
+                                }
+                                if (carState.getBestSector2TimeInMS() == 0 || completedS2 < carState.getBestSector2TimeInMS()) {
+                                    carState.setBestSector2TimeInMS(completedS2);
+                                }
+                                if (carState.getBestSector3TimeInMS() == 0 || completedS3 < carState.getBestSector3TimeInMS()) {
+                                    carState.setBestSector3TimeInMS(completedS3);
+                                }
+                            }
+                        }
+                        // Reset sector cache for the new lap
+                        carState.setSector1TimeInMS(0);
+                        carState.setSector2TimeInMS(0);
+                    }
+                    
                     carState.setPosition(lap.getCarPosition());
-                    carState.setCurrentLapNum(lap.getCurrentLapNum());
+                    carState.setCurrentLapNum(newLap);
                     carState.setSector(lap.getSector());
                     carState.setLastLapTimeInMS(lap.getLastLapTimeInMS());
                     carState.setCurrentLapTimeInMS(lap.getCurrentLapTimeInMS());
-                    carState.setSector1TimeInMS(lap.getSector1TimeMinutesPart() * 60000 + lap.getSector1TimeMSPart());
-                    carState.setSector2TimeInMS(lap.getSector2TimeMinutesPart() * 60000 + lap.getSector2TimeMSPart());
+                    if (lap.getLastLapTimeInMS() > 0) {
+                        if (carState.getBestLapTimeInMS() == 0 || lap.getLastLapTimeInMS() < carState.getBestLapTimeInMS()) {
+                            carState.setBestLapTimeInMS(lap.getLastLapTimeInMS());
+                        }
+                    }
+                    
+                    // Only update the live sector times if they are greater than 0 (prevents menu/lap resets from clearing the cache)
+                    if (s1 > 0) {
+                        carState.setSector1TimeInMS(s1);
+                    }
+                    if (s2 > 0) {
+                        carState.setSector2TimeInMS(s2);
+                    }
+                    
                     carState.setLapDistance(lap.getLapDistance()); // Phase 10: corner zone detection
+                    carState.setResultStatus(lap.getResultStatus());
                 }
             }
             case PacketCarStatusData status -> {
@@ -243,6 +294,14 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 log.info("[Event] Code: {} (packet #{})", event.getEventStringCode(), count);
             }
             case PacketParticipantsData participants -> {
+                for (int i = 0; i < 22; i++) {
+                    ParticipantData pd = participants.getParticipants()[i];
+                    CarState state = liveSessionState.getCars()[i];
+                    if (pd != null) {
+                        state.setName(pd.getName());
+                        state.setTeamId(pd.getTeamId());
+                    }
+                }
                 log.info("[Participants] Active cars: {} (packet #{})", participants.getNumActiveCars(), count);
             }
             default -> {

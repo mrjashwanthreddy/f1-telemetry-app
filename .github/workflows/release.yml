@@ -25,10 +25,13 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Inject Gemini API Key
+      - name: Inject Secrets
         shell: pwsh
         run: |
-          (Get-Content src/main/resources/application.properties) -replace 'gemini.api.key=.*', 'gemini.api.key=${{ secrets.GEMINI_KEY }}' | Set-Content src/main/resources/application.properties
+          (Get-Content src/main/resources/application.properties) `
+            -replace 'gemini.api.key=.*', 'gemini.api.key=${{ secrets.GEMINI_KEY }}' `
+            -replace 'razorpay.key.id=.*', 'razorpay.key.id=${{ secrets.RAZORPAY_KEY_ID }}' `
+            -replace 'razorpay.key.secret=.*', 'razorpay.key.secret=${{ secrets.RAZORPAY_KEY_SECRET }}' | Set-Content src/main/resources/application.properties
 
       - name: Read Version from Properties
         id: read_version

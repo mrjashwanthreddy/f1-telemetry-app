@@ -34,6 +34,8 @@ public class AiEngineerController {
     private final CornerAnalysisService cornerAnalysisService;
     private final GlobalHotkeyService globalHotkeyService;
     private final com.f1telemetry.service.PreferenceService preferenceService;
+    private final com.f1telemetry.service.AiPricingService pricingService;
+    private final com.f1telemetry.repository.AiUsageRecordRepository usageRecordRepository;
 
     // ── Status ─────────────────────────────────────────────────────────────────
 
@@ -43,10 +45,22 @@ public class AiEngineerController {
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         boolean activeEnabled = false;
+        String selectedModel = "gemini-3.1-flash-lite";
+        String ttsServiceType = "LOCAL";
+        String selectedTtsVoice = "en-GB-Neural2-B";
+        double creditBalance = 0.0;
+        double accumulatedCharges = 0.0;
+
         try {
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             if (username != null && !username.equals("anonymousUser")) {
-                activeEnabled = preferenceService.getPreferences(username).isAiEnabled();
+                com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+                activeEnabled = prefs.isAiEnabled();
+                selectedModel = prefs.getSelectedTextModel() != null ? prefs.getSelectedTextModel() : selectedModel;
+                ttsServiceType = prefs.getTtsServiceType() != null ? prefs.getTtsServiceType() : ttsServiceType;
+                selectedTtsVoice = prefs.getSelectedTtsVoice() != null ? prefs.getSelectedTtsVoice() : selectedTtsVoice;
+                creditBalance = prefs.getCreditBalance() != null ? prefs.getCreditBalance() : 0.0;
+                accumulatedCharges = prefs.getAccumulatedCharges() != null ? prefs.getAccumulatedCharges() : 0.0;
             }
         } catch (Exception e) {
             // ignore
@@ -55,7 +69,12 @@ public class AiEngineerController {
         return ResponseEntity.ok(Map.of(
             "aiConfigured", aiEngineerService.isConfigured(),
             "model", aiEngineerService.getModelName(),
-            "aiEnabled", activeEnabled
+            "aiEnabled", activeEnabled,
+            "selectedTextModel", selectedModel,
+            "ttsServiceType", ttsServiceType,
+            "selectedTtsVoice", selectedTtsVoice,
+            "creditBalance", creditBalance,
+            "accumulatedCharges", accumulatedCharges
         ));
     }
 
@@ -101,6 +120,11 @@ public class AiEngineerController {
         if (prefs == null || !prefs.isAiEnabled()) {
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "AI features are disabled in settings."
+            ));
+        }
+        if (prefs.getCreditBalance() != null && prefs.getCreditBalance() <= 0.0) {
+            return ResponseEntity.status(402).body(Map.of(
+                "error", "Insufficient credits. Please top up your account in the settings tab."
             ));
         }
 
@@ -198,6 +222,11 @@ public class AiEngineerController {
         if (prefs == null || !prefs.isAiEnabled()) {
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "AI features are disabled in settings."
+            ));
+        }
+        if (prefs.getCreditBalance() != null && prefs.getCreditBalance() <= 0.0) {
+            return ResponseEntity.status(402).body(Map.of(
+                "error", "Insufficient credits. Please top up your account in the settings tab."
             ));
         }
 
@@ -309,6 +338,112 @@ public class AiEngineerController {
             "tyreWearRR", l.getTyreWearRR(),
             "fuelRemaining", l.getFuelRemainingKg()
         );
+    }
+
+    @GetMapping("/usage/summary")
+    public ResponseEntity<?> getUsageSummary() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.f1telemetry.domain.User user = userOpt.get();
+        double totalSpent = usageRecordRepository.getTotalSpentByUser(user);
+        List<Map<String, Object>> modelUsage = usageRecordRepository.getUsageGroupByModel(user);
+        
+        return ResponseEntity.ok(Map.of(
+            "totalSpent", totalSpent,
+            "usageByModel", modelUsage
+        ));
+    }
+
+    @PostMapping("/billing/topup")
+    public ResponseEntity<?> topUpCredits(@RequestBody(required = false) Map<String, Object> payload) {
+        double amount = 10.00;
+        if (payload != null && payload.containsKey("amount")) {
+            try {
+                amount = Double.parseDouble(payload.get("amount").toString());
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount format"));
+            }
+        }
+        if (amount < 5.00) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Minimum top up amount is $5.00"));
+        }
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.f1telemetry.domain.User user = userOpt.get();
+        pricingService.addCredits(user, amount);
+        preferenceService.evictCache(username);
+        com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+        
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "newBalance", prefs.getCreditBalance()
+        ));
+    }
+
+    @PostMapping("/billing/pay")
+    public ResponseEntity<?> payAccruedCharges() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.f1telemetry.domain.User user = userOpt.get();
+        boolean success = pricingService.payAccruedCharges(user);
+        preferenceService.evictCache(username);
+        com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+        
+        if (!success) {
+            return ResponseEntity.status(402).body(Map.of(
+                "error", "Insufficient credits in wallet to pay accrued charges. Please top up your wallet first."
+            ));
+        }
+        
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "newBalance", prefs.getCreditBalance(),
+            "accumulatedCharges", prefs.getAccumulatedCharges()
+        ));
+    }
+
+    @PostMapping("/tts/synthesize")
+    public ResponseEntity<?> synthesizeTts(@RequestBody Map<String, String> payload) {
+        String text = payload.get("text");
+        String voice = payload.get("voice");
+        
+        if (text == null || text.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Text cannot be empty"));
+        }
+        
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.f1telemetry.domain.User user = userOpt.get();
+        
+        double cost = pricingService.calculateTtsCost("GOOGLE_CLOUD_TTS", text.length());
+        pricingService.accrueCharges(user, cost);
+        com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
+        
+        // Log TTS usage
+        usageRecordRepository.save(new com.f1telemetry.domain.AiUsageRecord(
+            user, System.currentTimeMillis(), "google-cloud-tts", "tts-synth",
+            text.length(), text.length(), "CHARACTERS", cost
+        ));
+
+        return ResponseEntity.ok(Map.of(
+            "status", "billed",
+            "cost", cost,
+            "accumulatedCharges", prefs.getAccumulatedCharges(),
+            "useFallbackPlayback", true
+        ));
     }
 
     /** Request body for the chat endpoint. */

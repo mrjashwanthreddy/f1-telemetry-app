@@ -45,4 +45,23 @@ public class LiveSessionState {
             cars[i] = new CarState(i);
         }
     }
+
+    public void reset() {
+        this.sessionId = null;
+        this.trackId = 0;
+        this.trackLength = 0;
+        this.sessionType = 0;
+        this.weather = 0;
+        this.totalLaps = 0;
+        this.safetyCarStatus = 0;
+        this.weekendLinkIdentifier = 0;
+        this.gameMode = 0;
+        this.networkGame = 0;
+        this.lapOffset = 0;
+        this.playerCarIndex = 0;
+        this.lastUpdateTime = 0;
+        for (int i = 0; i < 22; i++) {
+            this.cars[i] = new CarState(i);
+        }
+    }
 }
