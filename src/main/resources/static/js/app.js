@@ -606,7 +606,7 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         const lastLapTime = formatLapTime(car.lastLapTimeInMS);
         const bestLapTime = car.bestLapTimeInMS > 0 ? formatLapTime(car.bestLapTimeInMS) : '—';
         const tyreComp = getCompoundName(car.visualTyreCompound);
-        const tyreBadge = `<span style="background:${tyreComp.bg}; color:${tyreComp.color}; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:800;">${tyreComp.text}</span>`;
+        const tyreBadge = `<span style="background:${tyreComp.bg}; color:${tyreComp.color}; padding:4px 10px; border-radius:4px; font-size:0.85rem; font-weight:800;">${tyreComp.text}</span>`;
         
         // Gap calculation
         let gapText = '—';
@@ -627,8 +627,8 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         const bestS2 = car.bestSector2TimeInMS || 0;
         const bestS3 = car.bestSector3TimeInMS || 0;
         
-        if (car.sector === 0) {
-            // In Sector 1: show last lap's completed sector times
+        if (car.sector === 0 || car.resultStatus >= 3) {
+            // In Sector 1 or finished: show last lap's completed sector times
             s1Val = lastS1 > 0 ? formatSectorTime(lastS1) : '—';
             s1Class = getSectorHighlightClass(lastS1, bestS1, sessionBestS1);
             
@@ -660,16 +660,16 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         }
         
         row.innerHTML = `
-            <td style="padding:6px 12px; font-weight:700;">P${car.position}</td>
-            <td style="padding:6px 12px;">${driverBadge}</td>
-            <td style="padding:6px 12px; font-family:monospace;">${lastLapTime}</td>
-            <td style="padding:6px 12px; font-family:monospace; font-weight:700; color:var(--text-main);">${bestLapTime}</td>
-            <td style="padding:6px 12px;">${tyreBadge}</td>
-            <td style="padding:6px 12px; font-weight:700;">${car.tyresAgeLaps || 0}</td>
-            <td style="padding:6px 12px; font-family:monospace;">${gapText}</td>
-            <td style="padding:6px 12px; font-family:monospace;"><span class="${s1Class}">${s1Val}</span></td>
-            <td style="padding:6px 12px; font-family:monospace;"><span class="${s2Class}">${s2Val}</span></td>
-            <td style="padding:6px 12px; font-family:monospace;"><span class="${s3Class}">${s3Val}</span></td>
+            <td style="padding:8px 10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">P${car.position}</td>
+            <td style="padding:8px 10px; overflow:hidden;">${driverBadge}</td>
+            <td style="padding:8px 10px; font-family:monospace; white-space:nowrap; overflow:hidden;">${lastLapTime}</td>
+            <td style="padding:8px 10px; font-family:monospace; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden;">${bestLapTime}</td>
+            <td style="padding:8px 10px; overflow:hidden;">${tyreBadge}</td>
+            <td style="padding:8px 10px; font-weight:700; overflow:hidden;">${car.tyresAgeLaps || 0}</td>
+            <td style="padding:8px 10px; font-family:monospace; overflow:hidden;">${gapText}</td>
+            <td style="padding:8px 10px; font-family:monospace; overflow:hidden;"><span class="${s1Class}">${s1Val}</span></td>
+            <td style="padding:8px 10px; font-family:monospace; overflow:hidden;"><span class="${s2Class}">${s2Val}</span></td>
+            <td style="padding:8px 10px; font-family:monospace; overflow:hidden;"><span class="${s3Class}">${s3Val}</span></td>
         `;
         
         rowsContainer.appendChild(row);

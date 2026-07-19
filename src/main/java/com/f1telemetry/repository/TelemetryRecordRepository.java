@@ -2,7 +2,11 @@ package com.f1telemetry.repository;
 
 import com.f1telemetry.domain.TelemetryRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -11,11 +15,15 @@ public interface TelemetryRecordRepository extends JpaRepository<TelemetryRecord
     List<TelemetryRecord> findBySessionIdOrderByTimestampAsc(String sessionId);
     List<TelemetryRecord> findBySessionIdAndCurrentLapNumOrderByTimestampAsc(String sessionId, int currentLapNum);
 
-    @org.springframework.transaction.annotation.Transactional
-    void deleteBySessionId(String sessionId);
+    // Bulk DELETE — single SQL statement, avoids Hibernate entity-by-entity deletion
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM TelemetryRecord t WHERE t.sessionId = :sessionId")
+    int bulkDeleteBySessionId(@Param("sessionId") String sessionId);
 
-    @org.springframework.transaction.annotation.Transactional
-    @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query("DELETE FROM TelemetryRecord t WHERE t.currentLapNum <= 0 OR (t.speed = 0 AND t.engineRPM = 0 AND t.throttle = 0 AND t.brake = 0 AND t.steer = 0 AND t.gForceLateral = 0 AND t.lapDistance = 0)")
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM TelemetryRecord t WHERE t.currentLapNum <= 0 OR (t.speed = 0 AND t.engineRPM = 0 AND t.throttle = 0 AND t.brake = 0 AND t.steer = 0 AND t.gForceLateral = 0 AND t.lapDistance = 0)")
     int deleteEmptyOrInvalidRecords();
 }
+
