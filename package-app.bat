@@ -47,7 +47,7 @@ jpackage ^
   --input target\input ^
   --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar ^
   --main-class org.springframework.boot.loader.launch.JarLauncher ^
-  --runtime-image target\custom-runtime ^
+  --runtime-image "%JAVA_HOME%" ^
   --java-options "-Djava.awt.headless=false" ^
   --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" ^
   --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" ^
