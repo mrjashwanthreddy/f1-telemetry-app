@@ -15,8 +15,8 @@ public class F1TelemetryApplication {
     public static volatile SplashScreen splashScreen;
 
     public static void main(String[] args) {
-        // Ensure AWT headless mode is disabled to support System Tray and GUI launching
-        System.setProperty("java.awt.headless", "false");
+        // Headless mode is controlled by the JVM flag -Djava.awt.headless=true (set in Dockerfile)
+        // Do NOT force headless=false here — it breaks server deployments with no display.
 
         // Register custom native library locator for JNativeHook
         System.setProperty("jnativehook.lib.locator", "com.f1telemetry.ai.CustomLibraryLocator");
