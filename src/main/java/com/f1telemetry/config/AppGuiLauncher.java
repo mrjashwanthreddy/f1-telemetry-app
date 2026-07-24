@@ -35,6 +35,9 @@ public class AppGuiLauncher {
     @Value("${server.port:8080}")
     private int port;
 
+    @Value("${remote.backend.url:}")
+    private String remoteBackendUrl;
+
     @org.springframework.beans.factory.annotation.Autowired
     private com.f1telemetry.update.UpdateManager updateManager;
 
@@ -57,11 +60,18 @@ public class AppGuiLauncher {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
+        if (GraphicsEnvironment.isHeadless()) {
+            logger.info("Running in headless server mode — skipping desktop GUI initialization.");
+            return;
+        }
         EventQueue.invokeLater(this::initGui);
     }
 
     private void initGui() {
-        String url = "http://localhost:" + port;
+        String url = (remoteBackendUrl != null && !remoteBackendUrl.isBlank()) 
+                ? remoteBackendUrl 
+                : "http://localhost:" + port;
+        logger.info("Initializing desktop window with backend URL: {}", url);
 
         try {
             initCef();

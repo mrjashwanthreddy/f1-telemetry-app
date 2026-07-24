@@ -93,6 +93,7 @@ public class AiEngineerService {
      */
     public String analyzeLapCompletion(LapCompletionContext ctx) {
         String prompt = PromptBuilder.buildLapAlertPrompt(ctx);
+        log.debug("Generating lap alert for lap {} on {}", ctx.getLapNumber(), ctx.getTrackName());
         return callGemini(prompt, "lap-alert");
     }
 
@@ -109,6 +110,7 @@ public class AiEngineerService {
     public String generateSessionDebrief(String trackName, String sessionType,
             java.util.List<int[]> laps, String cornerAnalysis) {
         String prompt = PromptBuilder.buildSessionDebriefPrompt(trackName, sessionType, laps, cornerAnalysis);
+        log.info("Generating session debrief for {} {} ({} laps)", trackName, sessionType, laps.size());
         return callGemini(prompt, "session-debrief");
     }
 
@@ -126,6 +128,8 @@ public class AiEngineerService {
             java.util.List<int[]> laps, String additionalContext) {
         String prompt = PromptBuilder.buildChatPrompt(question, trackName, sessionType,
                 laps, additionalContext);
+        log.debug("Chat question for {} {}: '{}'", trackName, sessionType, 
+                question.length() > 80 ? question.substring(0, 80) + "..." : question);
         return callGemini(prompt, "chat");
     }
 
@@ -142,6 +146,7 @@ public class AiEngineerService {
         }
 
         String modelToUse = getModelName();
+        long startTime = System.currentTimeMillis();
 
         try {
             // Build the Gemini request payload
@@ -166,6 +171,9 @@ public class AiEngineerService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                     .timeout(Duration.ofSeconds(15))
                     .build();
+
+            log.debug("[AI] Calling {} for context '{}' (prompt length: {} chars)", 
+                    modelToUse, context, prompt.length());
 
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
@@ -193,7 +201,9 @@ public class AiEngineerService {
             int outputTokens = usageNode.path("candidatesTokenCount").asInt(0);
 
             String result = text.asText().trim();
-            log.info("[AI] {} response ({} chars): {}", context, result.length(),
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            log.info("[AI] {} response from {} in {}ms (in={} out={} tokens, {} chars): {}", 
+                    context, modelToUse, elapsedMs, inputTokens, outputTokens, result.length(),
                     result.length() > 120 ? result.substring(0, 120) + "..." : result);
 
             // Record usage in DB if user is present
@@ -210,7 +220,9 @@ public class AiEngineerService {
             return result;
 
         } catch (Exception e) {
-            log.error("[AI] Error calling Gemini for context '{}': {}", context, e.getMessage());
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            log.error("[AI] Error calling {} for context '{}' after {}ms: {}", 
+                    modelToUse, context, elapsedMs, e.getMessage());
             return null;
         }
     }

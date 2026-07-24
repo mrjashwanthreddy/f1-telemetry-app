@@ -125,7 +125,11 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     state.setSpeed(ct.getSpeed());
                     state.setEngineRPM(ct.getEngineRPM());
                     state.setGear(ct.getGear());
-                    state.setThrottle(ct.getThrottle());
+                    float throttle = ct.getThrottle();
+                    if (throttle >= 0.97f) {
+                        throttle = 1.0f;
+                    }
+                    state.setThrottle(throttle);
                     state.setBrake(ct.getBrake());
                     state.setSteer(ct.getSteer());
                     System.arraycopy(ct.getTyresSurfaceTemperature(), 0, state.getTyreSurfaceTemps(), 0, 4);

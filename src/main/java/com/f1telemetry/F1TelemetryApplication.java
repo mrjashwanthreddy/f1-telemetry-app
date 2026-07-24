@@ -32,15 +32,21 @@ public class F1TelemetryApplication {
             System.out.println("[F1Telemetry] No .env file found — using system environment variables.");
         }
 
-        // Show splash screen immediately on EDT (before Spring Boot starts)
-        SwingUtilities.invokeLater(() -> {
-            splashScreen = new SplashScreen();
-            splashScreen.showSplash();
-        });
+        // Show splash screen on EDT if not running in headless server mode
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            SwingUtilities.invokeLater(() -> {
+                splashScreen = new SplashScreen();
+                splashScreen.showSplash();
+            });
+        }
 
-        // Spring Boot starts on main thread — splash is visible during initialization
+        // Spring Boot starts on main thread
         SpringApplication app = new SpringApplication(F1TelemetryApplication.class);
-        app.setHeadless(false);
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            app.setHeadless(true);
+        } else {
+            app.setHeadless(false);
+        }
         app.run(args);
 
         // Note: AppGuiLauncher.onApplicationReady() will dismiss the splash

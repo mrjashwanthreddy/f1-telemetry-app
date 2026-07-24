@@ -24,22 +24,29 @@ public class PreferenceService {
         // Try Cache First
         UserPreference cached = preferencesCache.getIfPresent(username);
         if (cached != null) {
+            log.debug("Preferences cache HIT for user '{}'", username);
             return cached;
         }
 
+        log.debug("Preferences cache MISS for user '{}' — loading from DB", username);
+
         // Fetch from DB
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> {
+                    log.warn("Preferences lookup failed — user '{}' not found in DB", username);
+                    return new RuntimeException("User not found");
+                });
 
         UserPreference pref = preferenceRepository.findByUser(user)
                 .orElseGet(() -> {
+                    log.info("Creating default preferences for new user '{}'", username);
                     UserPreference newPref = new UserPreference(user);
                     return preferenceRepository.save(newPref);
                 });
 
         // Load into cache
         preferencesCache.put(username, pref);
-        log.info("Loaded preferences for {} into Caffeine cache", username);
+        log.info("Loaded preferences for '{}' into Caffeine cache", username);
         return pref;
     }
 
@@ -76,7 +83,8 @@ public class PreferenceService {
 
         // Update cache instantly
         preferencesCache.put(username, saved);
-        log.info("Updated preferences for {} in DB and cache", username);
+        log.info("Updated preferences for '{}' in DB and cache (aiEnabled={}, udpHost={}, udpPort={})",
+                username, saved.isAiEnabled(), saved.getUdpHost(), saved.getUdpPort());
 
         // Dynamically restart UDP Server with new configurations
         try {
@@ -89,6 +97,6 @@ public class PreferenceService {
 
     public void evictCache(String username) {
         preferencesCache.invalidate(username);
-        log.info("Evicted preferences cache for {}", username);
+        log.info("Evicted preferences cache for '{}'", username);
     }
 }
