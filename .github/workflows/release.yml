@@ -1,10 +1,10 @@
-name: Build & Release Standalone Executable
+name: Build & Release Standalone Windows EXE
 
 on:
   push:
     tags:
-      - 'v*' # Trigger on version tags (e.g. v1.0.0)
-  workflow_dispatch: # Enable manual run from the GitHub Actions tab
+      - 'v*'           # Trigger on version tags (e.g. v1.0.0)
+  workflow_dispatch:   # Manual trigger from GitHub Actions tab
 
 permissions:
   contents: write
@@ -17,61 +17,100 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: feature/security   # Always build from feature/security branch
 
-      - name: Set up JDK 21
+      - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Inject Secrets
+      - name: Inject Secrets into application.properties
         shell: pwsh
         run: |
-          (Get-Content src/main/resources/application.properties) `
-            -replace 'gemini.api.key=.*', 'gemini.api.key=${{ secrets.GEMINI_KEY }}' `
-            -replace 'razorpay.key.id=.*', 'razorpay.key.id=${{ secrets.RAZORPAY_KEY_ID }}' `
-            -replace 'razorpay.key.secret=.*', 'razorpay.key.secret=${{ secrets.RAZORPAY_KEY_SECRET }}' | Set-Content src/main/resources/application.properties
+          $props = Get-Content src/main/resources/application.properties
+          $props = $props -replace 'gemini\.api\.key=.*',         'gemini.api.key=${{ secrets.GEMINI_KEY }}'
+          $props = $props -replace 'razorpay\.key\.id=.*',        'razorpay.key.id=${{ secrets.RAZORPAY_KEY_ID }}'
+          $props = $props -replace 'razorpay\.key\.secret=.*',    'razorpay.key.secret=${{ secrets.RAZORPAY_KEY_SECRET }}'
+          $props = $props -replace 'spring\.datasource\.password=.*', 'spring.datasource.password=${{ secrets.DB_PASSWORD }}'
+          $props = $props -replace 'spring\.datasource\.username=.*', 'spring.datasource.username=${{ secrets.DB_USERNAME }}'
+          $props = $props -replace 'jwt\.secret=.*',              'jwt.secret=${{ secrets.JWT_SECRET }}'
+          $props | Set-Content src/main/resources/application.properties
+          echo "Secrets injected successfully."
 
-      - name: Read Version from Properties
+      - name: Read App Version
         id: read_version
         shell: pwsh
         run: |
-          $ver = (Get-Content src/main/resources/application.properties | Select-String "app.version=").Line.Split("=")[1].Trim()
+          $ver = (Get-Content src/main/resources/application.properties |
+                  Select-String "^app\.version=").Line.Split("=")[1].Trim()
           echo "Parsed version: $ver"
           echo "version=$ver" >> $env:GITHUB_OUTPUT
 
       - name: Build Fat Spring Boot JAR
-        run: |
-          mvn clean package -DskipTests
+        run: mvn clean package -DskipTests
 
-      - name: Generate Custom JRE (jlink)
+      - name: Generate Minimal Custom JRE (jlink)
         shell: pwsh
         run: |
-          jlink --no-header-files --no-man-pages --strip-debug --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.jsobject --output target/custom-runtime
+          jlink `
+            --no-header-files --no-man-pages --strip-debug `
+            --add-modules java.base,java.logging,java.xml,java.naming,java.sql,java.transaction.xa,java.compiler,java.net.http,java.scripting,java.security.jgss,java.security.sasl,java.instrument,java.desktop,java.management,jdk.unsupported,jdk.management,java.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.jsobject `
+            --output target/custom-runtime
 
-      - name: Stage Packaging Input
+      - name: Stage JAR for Packaging
         shell: pwsh
         run: |
-          mkdir target/input
-          copy target/f1-telemetry-0.0.1-SNAPSHOT.jar target/input/f1-telemetry-0.0.1-SNAPSHOT.jar
+          New-Item -ItemType Directory -Force -Path target/input | Out-Null
+          Copy-Item target/f1-telemetry-0.0.1-SNAPSHOT.jar target/input/
 
       - name: Package Standalone EXE (jpackage)
         shell: pwsh
         run: |
-          jpackage --type app-image --dest target/dist --name F1Telemetry --input target/input --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --runtime-image target/custom-runtime --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" --icon logo.ico
+          jpackage `
+            --type app-image `
+            --dest target/dist `
+            --name F1Telemetry `
+            --input target/input `
+            --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar `
+            --main-class org.springframework.boot.loader.launch.JarLauncher `
+            --runtime-image target/custom-runtime `
+            --java-options "-Djava.awt.headless=false" `
+            --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" `
+            --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" `
+            --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" `
+            --icon logo.ico
 
-      - name: Compress Release Artifacts (Zip)
+      - name: Compress Release Artifact (ZIP)
         shell: pwsh
         run: |
-          Compress-Archive -Path target/dist/F1Telemetry -DestinationPath target/dist/F1Telemetry-Windows.zip
+          Compress-Archive `
+            -Path target/dist/F1Telemetry `
+            -DestinationPath target/dist/F1Telemetry-Windows-v${{ steps.read_version.outputs.version }}.zip
 
-      - name: Create GitHub Release and Upload Assets
+      - name: Create GitHub Release and Upload
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.read_version.outputs.version }}
-          name: F1Telemetry v${{ steps.read_version.outputs.version }}
-          files: target/dist/F1Telemetry-Windows.zip
+          name: "F1 Telemetry v${{ steps.read_version.outputs.version }}"
+          body: |
+            ## F1 Telemetry Desktop App v${{ steps.read_version.outputs.version }}
+
+            ### How to Use
+            1. Download and extract `F1Telemetry-Windows-v${{ steps.read_version.outputs.version }}.zip`
+            2. Run `F1Telemetry.exe`
+            3. On first launch, JCEF will download Chromium (~250MB) automatically
+
+            ### Backend
+            - Hosted on Oracle Cloud (Always Free) at `http://f1-telemetry-app.duckdns.org:8080`
+            - No local server setup required — the app connects to the cloud backend automatically
+
+            ### Requirements
+            - Windows 10 / 11 (x64)
+            - Internet connection required
+          files: target/dist/F1Telemetry-Windows-v${{ steps.read_version.outputs.version }}.zip
           draft: false
           prerelease: false
         env:
