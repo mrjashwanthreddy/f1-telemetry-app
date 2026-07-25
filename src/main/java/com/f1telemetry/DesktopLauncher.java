@@ -120,6 +120,19 @@ public class DesktopLauncher {
                 return false;
             }
         });
+
+        // Display rich dark-themed offline error page when the server is unreachable
+        cefClient.addLoadHandler(new org.cef.handler.CefLoadHandlerAdapter() {
+            @Override
+            public void onLoadError(CefBrowser browser, org.cef.browser.CefFrame frame,
+                                    org.cef.handler.CefLoadHandler.ErrorCode errorCode, String errorText, String failedUrl) {
+                if (frame.isMain() && errorCode != org.cef.handler.CefLoadHandler.ErrorCode.ERR_NONE && errorCode != org.cef.handler.CefLoadHandler.ErrorCode.ERR_ABORTED) {
+                    String offlineHtml = buildOfflineHtmlPage(failedUrl);
+                    String base64Html = java.util.Base64.getEncoder().encodeToString(offlineHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    browser.loadURL("data:text/html;base64," + base64Html);
+                }
+            }
+        });
     }
 
     private void createMainWindow(String url) {
@@ -443,5 +456,147 @@ public class DesktopLauncher {
         g2.drawString(text, x, y);
         g2.dispose();
         return img;
+    }
+
+    private static String buildOfflineHtmlPage(String targetUrl) {
+        return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>Server Unavailable - F1 Race Engineer</title>
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+                    body {
+                        background-color: #0b0f19;
+                        color: #e2e8f0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        text-align: center;
+                        padding: 20px;
+                    }
+                    .card {
+                        background: linear-gradient(145deg, #131b2e, #0f172a);
+                        border: 1px solid rgba(229, 9, 20, 0.35);
+                        border-radius: 16px;
+                        padding: 48px 40px;
+                        max-width: 520px;
+                        width: 100%;
+                        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(229, 9, 20, 0.15);
+                    }
+                    .logo-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #e50914;
+                        color: #ffffff;
+                        font-weight: 900;
+                        font-size: 24px;
+                        width: 64px;
+                        height: 56px;
+                        border-radius: 12px;
+                        margin: 0 auto 24px auto;
+                        letter-spacing: -1px;
+                        box-shadow: 0 8px 20px rgba(229, 9, 20, 0.4);
+                    }
+                    h1 {
+                        font-size: 22px;
+                        font-weight: 800;
+                        letter-spacing: 0.5px;
+                        color: #f8fafc;
+                        margin-bottom: 12px;
+                        text-transform: uppercase;
+                    }
+                    p {
+                        color: #94a3b8;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        margin-bottom: 28px;
+                    }
+                    .status-pill {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: rgba(229, 9, 20, 0.12);
+                        border: 1px solid rgba(229, 9, 20, 0.3);
+                        color: #ff4d4d;
+                        padding: 6px 16px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        font-weight: 700;
+                        margin-bottom: 24px;
+                    }
+                    .dot {
+                        width: 8px;
+                        height: 8px;
+                        background: #e50914;
+                        border-radius: 50%;
+                        box-shadow: 0 0 10px #e50914;
+                        animation: pulse 1.5s infinite;
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.4; transform: scale(0.85); }
+                    }
+                    .btn-retry {
+                        background: linear-gradient(135deg, #e50914, #b20710);
+                        color: #ffffff;
+                        border: none;
+                        padding: 14px 32px;
+                        font-size: 14px;
+                        font-weight: 700;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        width: 100%;
+                    }
+                    .btn-retry:hover {
+                        background: linear-gradient(135deg, #ff1e27, #c90812);
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 20px rgba(229, 9, 20, 0.5);
+                    }
+                    .footer-note {
+                        margin-top: 24px;
+                        font-size: 12px;
+                        color: #64748b;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="logo-badge">F1</div>
+                    <div>
+                        <div class="status-pill">
+                            <span class="dot"></span>
+                            SERVER UNREACHABLE
+                        </div>
+                    </div>
+                    <h1>Server Unavailable</h1>
+                    <p>The F1 Telemetry server is currently offline or unreachable. If you host the backend on Oracle Cloud, please verify that your server instance and Docker container are started.</p>
+                    <button class="btn-retry" onclick="retryConnection()">Reconnect to Dashboard</button>
+                    <div class="footer-note">Auto-retrying in <span id="timer">15</span>s...</div>
+                </div>
+                <script>
+                    const targetUrl = "%s";
+                    let seconds = 15;
+                    function retryConnection() {
+                        window.location.href = targetUrl;
+                    }
+                    setInterval(() => {
+                        seconds--;
+                        document.getElementById("timer").innerText = seconds;
+                        if (seconds <= 0) {
+                            retryConnection();
+                        }
+                    }, 1000);
+                </script>
+            </body>
+            </html>
+            """.formatted(targetUrl);
     }
 }
