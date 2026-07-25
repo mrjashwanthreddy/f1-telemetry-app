@@ -15,8 +15,15 @@ public class F1TelemetryApplication {
     public static volatile SplashScreen splashScreen;
 
     public static void main(String[] args) {
-        // Ensure AWT headless mode is disabled to support System Tray and GUI launching
-        System.setProperty("java.awt.headless", "false");
+        // Desktop client mode: when the .exe is built with -Df1.desktop.mode=true,
+        // skip Spring Boot entirely and launch the JCEF browser pointing to the remote server.
+        if ("true".equals(System.getProperty("f1.desktop.mode"))) {
+            DesktopLauncher.main(args);
+            return;
+        }
+
+        // Headless mode is controlled by the JVM flag -Djava.awt.headless=true (set in Dockerfile)
+        // Do NOT force headless=false here — it breaks server deployments with no display.
 
         // Register custom native library locator for JNativeHook
         System.setProperty("jnativehook.lib.locator", "com.f1telemetry.ai.CustomLibraryLocator");
@@ -32,15 +39,21 @@ public class F1TelemetryApplication {
             System.out.println("[F1Telemetry] No .env file found — using system environment variables.");
         }
 
-        // Show splash screen immediately on EDT (before Spring Boot starts)
-        SwingUtilities.invokeLater(() -> {
-            splashScreen = new SplashScreen();
-            splashScreen.showSplash();
-        });
+        // Show splash screen on EDT if not running in headless server mode
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            SwingUtilities.invokeLater(() -> {
+                splashScreen = new SplashScreen();
+                splashScreen.showSplash();
+            });
+        }
 
-        // Spring Boot starts on main thread — splash is visible during initialization
+        // Spring Boot starts on main thread
         SpringApplication app = new SpringApplication(F1TelemetryApplication.class);
-        app.setHeadless(false);
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            app.setHeadless(true);
+        } else {
+            app.setHeadless(false);
+        }
         app.run(args);
 
         // Note: AppGuiLauncher.onApplicationReady() will dismiss the splash

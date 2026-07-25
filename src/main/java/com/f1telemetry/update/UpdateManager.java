@@ -45,7 +45,7 @@ public class UpdateManager {
                     // Find the F1Telemetry-Windows.zip asset
                     String downloadUrl = null;
                     for (GitHubAsset asset : release.assets) {
-                        if (asset.name.equalsIgnoreCase("F1Telemetry-Windows.zip")) {
+                        if (asset.name.toLowerCase().startsWith("f1telemetry-windows") && asset.name.endsWith(".zip")) {
                             downloadUrl = asset.browserDownloadUrl;
                             break;
                         }

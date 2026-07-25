@@ -7,6 +7,7 @@ import com.f1telemetry.repository.LapTimeRecordRepository;
 import com.f1telemetry.repository.RaceSessionRepository;
 import com.f1telemetry.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ import java.util.Optional;
  * POST /api/ai/chat                           → Session chat bot Q&A
  * GET  /api/ai/status                         → Whether AI is configured (key present)
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -118,11 +120,13 @@ public class AiEngineerController {
 
         com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
         if (prefs == null || !prefs.isAiEnabled()) {
+            log.warn("AI debrief denied for session '{}' — AI features disabled", sessionId);
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "AI features are disabled in settings."
             ));
         }
         if (prefs.getCreditBalance() != null && prefs.getCreditBalance() <= 0.0) {
+            log.warn("AI debrief denied for session '{}' — insufficient credits", sessionId);
             return ResponseEntity.status(402).body(Map.of(
                 "error", "Insufficient credits. Please top up your account in the settings tab."
             ));
@@ -191,11 +195,14 @@ public class AiEngineerController {
             session.getTrackName(), session.getSessionType(), lapData, cornerAnalysis);
 
         if (debrief == null) {
+            log.error("AI debrief generation failed for session '{}' — service unavailable", sessionId);
             return ResponseEntity.internalServerError().body(Map.of(
                 "error", "AI service unavailable. Check your GEMINI_API_KEY configuration."
             ));
         }
 
+        log.info("AI debrief generated for session '{}' ({} laps, track: {})", 
+                sessionId, laps.size(), session.getTrackName());
         return ResponseEntity.ok(Map.of(
             "sessionId", sessionId,
             "track", session.getTrackName(),
@@ -220,11 +227,13 @@ public class AiEngineerController {
 
         com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
         if (prefs == null || !prefs.isAiEnabled()) {
+            log.warn("AI chat denied — AI features disabled");
             return ResponseEntity.badRequest().body(Map.of(
                 "error", "AI features are disabled in settings."
             ));
         }
         if (prefs.getCreditBalance() != null && prefs.getCreditBalance() <= 0.0) {
+            log.warn("AI chat denied — insufficient credits");
             return ResponseEntity.status(402).body(Map.of(
                 "error", "Insufficient credits. Please top up your account in the settings tab."
             ));
@@ -291,11 +300,14 @@ public class AiEngineerController {
         );
 
         if (answer == null) {
+            log.error("AI chat response failed — service unavailable");
             return ResponseEntity.internalServerError().body(Map.of(
                 "error", "AI service unavailable."
             ));
         }
 
+        log.info("AI chat answered for session '{}': '{}'", request.getSessionId(), 
+                request.getQuestion().length() > 60 ? request.getQuestion().substring(0, 60) + "..." : request.getQuestion());
         return ResponseEntity.ok(Map.of(
             "question", request.getQuestion(),
             "answer", answer,

@@ -47,7 +47,7 @@ public class AiLapAlertService {
      * @param totalMs     total lap time in ms
      * @param state       current live session state (for tire temps, track info)
      */
-    @Async("persistenceTaskExecutor")
+    @Async("aiTaskExecutor")
     public void fireLapAlertAsync(int lapNum, int s1Ms, int s2Ms, int s3Ms, int totalMs,
                                    LiveSessionState state) {
         try {
@@ -58,7 +58,7 @@ public class AiLapAlertService {
             // Fetch session and lap history for comparison
             Optional<RaceSession> sessionOpt = sessionRepository.findBySessionId(dbSessionId);
             if (sessionOpt.isEmpty()) {
-                log.warn("[AI Lap Alert] Session {} not found in DB — skipping", dbSessionId);
+                log.warn("[AI Lap Alert] Session {} not found in DB — skipping lap {} alert", dbSessionId, lapNum);
                 return;
             }
 
@@ -133,7 +133,8 @@ public class AiLapAlertService {
             AlertEvent alert = new AlertEvent("LAP_DEBRIEF", message, severity,
                 System.currentTimeMillis(), detailJson);
 
-            log.info("[AI Lap Alert] Broadcasting LAP_DEBRIEF for Lap {} — {}", lapNum, lapTimeFormatted);
+            log.info("[AI Lap Alert] Broadcasting LAP_DEBRIEF for Lap {} — {} (session: {}, track: {})", 
+                    lapNum, lapTimeFormatted, dbSessionId, trackName);
             messagingTemplate.convertAndSend("/topic/live-alerts", alert);
 
         } catch (Exception e) {

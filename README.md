@@ -81,17 +81,23 @@ No developer setup is required! You do not need to install Java, Maven, Docker, 
    ```
 
 3. **Verify Configuration**
-   Check local preferences in `f1-telemetry-app/src/main/resources/application.properties`. Ensure JDBC configurations match your database profile (do not commit production credentials to source control):
-   ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/f1telemetry
-   spring.datasource.username=your_username
-   spring.datasource.password=your_password
-   spring.datasource.driver-class-name=org.postgresql.Driver
-   ```
+   Instead of modifying the committed `application.properties` (which points to Supabase for production packaging), configure local development properties via Spring Boot profiles:
+   - Create a file named `src/main/resources/application-dev.properties`.
+   - Add the database connection settings matching your local docker database details (configured for port `5433` by default in `docker-compose.yml`):
+     ```properties
+     spring.datasource.url=jdbc:postgresql://localhost:5433/f1telemetry
+     spring.datasource.username=f1user
+     spring.datasource.password=f1pass
+     ```
+     *(Note: `application-dev.properties` is listed in `.gitignore` and will never be committed to Git).*
 
 4. **Environment Variables**
-   Create a `.env` file in the project directory for local Gemini AI features:
+   Create a `.env` file in the `f1-telemetry-app` directory (or update your existing one) to activate the `dev` profile and supply local API keys:
    ```env
+   # Enable local dev profile (loads application-dev.properties)
+   SPRING_PROFILES_ACTIVE=dev
+
+   # Gemini AI API Key
    GEMINI_KEY=your_gemini_api_key_here
    ```
 

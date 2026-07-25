@@ -8,6 +8,7 @@ import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.Utils;
 import org.json.JSONObject;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
@@ -56,6 +58,8 @@ public class PaymentController {
             orderRequest.put("receipt", "txn_" + System.currentTimeMillis());
 
             Order order = client.orders.create(orderRequest);
+            log.info("Payment order created: orderId={}, amount=${} USD ({} paise INR)", 
+                    order.get("id"), usdAmount, amountInPaise);
 
             return ResponseEntity.ok(Map.of(
                 "orderId", order.get("id"),
@@ -65,6 +69,7 @@ public class PaymentController {
                 "usdAmount", usdAmount
             ));
         } catch (Exception e) {
+            log.error("Failed to create payment order: {}", e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
@@ -84,6 +89,7 @@ public class PaymentController {
 
             boolean isValid = Utils.verifyPaymentSignature(options, keySecret);
             if (!isValid) {
+                log.warn("Payment signature verification failed for order '{}'", orderId);
                 return ResponseEntity.status(400).body(Map.of("error", "Invalid signature verification"));
             }
 
@@ -95,6 +101,8 @@ public class PaymentController {
             User user = userOpt.get();
             pricingService.addCredits(user, usdAmount);
             preferenceService.evictCache(username);
+            log.info("Payment verified and credits added: orderId={}, amount=${} USD for user '{}'", 
+                    orderId, usdAmount, username);
 
             // Fetch new preferences to get updated balance
             com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
@@ -104,6 +112,7 @@ public class PaymentController {
                 "newBalance", prefs.getCreditBalance()
             ));
         } catch (Exception e) {
+            log.error("Payment verification failed: {}", e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }

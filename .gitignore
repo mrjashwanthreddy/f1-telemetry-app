@@ -4,3 +4,12 @@
 # Environment secrets — never commit these
 .env
 .env.local
+
+# Local Spring profiles configuration
+/src/main/resources/application-dev.properties
+
+# Logs — never commit these
+logs/
+*.log
+debug.log
+

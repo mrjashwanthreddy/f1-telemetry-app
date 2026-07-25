@@ -18,6 +18,19 @@ public class AsyncConfig {
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("DB-Writer-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        executor.initialize();
+        return executor;
+    }
+
+    @Bean(name = "aiTaskExecutor")
+    public Executor aiTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("AI-Worker-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
         executor.initialize();
         return executor;
     }

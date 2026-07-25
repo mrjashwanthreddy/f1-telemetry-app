@@ -38,6 +38,7 @@ public class UdpServer {
     @PostConstruct
     public void start() {
         group = new NioEventLoopGroup(1); // Single event-loop thread for UDP
+        long startMs = System.currentTimeMillis();
 
         try {
             Bootstrap bootstrap = new Bootstrap();
@@ -48,12 +49,15 @@ public class UdpServer {
                     .handler(udpPacketHandler);
 
             channel = bootstrap.bind(host, port).sync().channel();
-            log.info("🏎️  UDP server started on {}:{}", host, port);
+            long elapsed = System.currentTimeMillis() - startMs;
+            log.info("🏎️  UDP server started on {}:{} in {}ms", host, port, elapsed);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Failed to start UDP server", e);
+            log.error("Failed to start UDP server (interrupted after {}ms)", 
+                    System.currentTimeMillis() - startMs, e);
         } catch (Exception e) {
-            log.error("Failed to bind UDP server to {}:{}", host, port, e);
+            log.error("Failed to bind UDP server to {}:{} after {}ms", 
+                    host, port, System.currentTimeMillis() - startMs, e);
         }
     }
 
