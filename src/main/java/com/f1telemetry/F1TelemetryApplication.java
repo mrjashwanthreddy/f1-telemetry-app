@@ -15,6 +15,13 @@ public class F1TelemetryApplication {
     public static volatile SplashScreen splashScreen;
 
     public static void main(String[] args) {
+        // Desktop client mode: when the .exe is built with -Df1.desktop.mode=true,
+        // skip Spring Boot entirely and launch the JCEF browser pointing to the remote server.
+        if ("true".equals(System.getProperty("f1.desktop.mode"))) {
+            DesktopLauncher.main(args);
+            return;
+        }
+
         // Headless mode is controlled by the JVM flag -Djava.awt.headless=true (set in Dockerfile)
         // Do NOT force headless=false here — it breaks server deployments with no display.
 

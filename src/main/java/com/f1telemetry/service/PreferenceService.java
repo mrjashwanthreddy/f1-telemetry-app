@@ -24,7 +24,7 @@ public class PreferenceService {
         // Try Cache First
         UserPreference cached = preferencesCache.getIfPresent(username);
         if (cached != null) {
-            log.debug("Preferences cache HIT for user '{}'", username);
+            log.trace("Preferences cache HIT for user '{}'", username);
             return cached;
         }
 

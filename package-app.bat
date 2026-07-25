@@ -3,7 +3,7 @@ set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo ==============================================
-echo F1 Telemetry — Desktop EXE Builder
+echo F1 Telemetry - Desktop EXE Builder
 echo Backend: http://f1-telemetry-app.duckdns.org:8080
 echo ==============================================
 
@@ -49,9 +49,10 @@ jpackage ^
   --main-class org.springframework.boot.loader.launch.JarLauncher ^
   --runtime-image "%JAVA_HOME%" ^
   --java-options "-Djava.awt.headless=false" ^
-  --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" ^
-  --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" ^
-  --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" ^
+  --java-options "-Df1.desktop.mode=true" ^
+  --java-options "--add-exports=java.base/java.lang=ALL-UNNAMED" ^
+  --java-options "--add-exports=java.desktop/sun.awt=ALL-UNNAMED" ^
+  --java-options "--add-exports=java.desktop/sun.java2d=ALL-UNNAMED" ^
   --icon logo.ico
 if %ERRORLEVEL% neq 0 (
     echo ERROR: jpackage failed!

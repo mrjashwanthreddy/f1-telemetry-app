@@ -78,9 +78,10 @@ jobs:
             --main-class org.springframework.boot.loader.launch.JarLauncher `
             --runtime-image "$env:JAVA_HOME" `
             --java-options "-Djava.awt.headless=false" `
-            --java-options "--add-exports java.base/java.lang=ALL-UNNAMED" `
-            --java-options "--add-exports java.desktop/sun.awt=ALL-UNNAMED" `
-            --java-options "--add-exports java.desktop/sun.java2d=ALL-UNNAMED" `
+            --java-options "-Df1.desktop.mode=true" `
+            --java-options "--add-exports=java.base/java.lang=ALL-UNNAMED" `
+            --java-options "--add-exports=java.desktop/sun.awt=ALL-UNNAMED" `
+            --java-options "--add-exports=java.desktop/sun.java2d=ALL-UNNAMED" `
             --icon logo.ico
 
       - name: Compress Release Artifact (ZIP)

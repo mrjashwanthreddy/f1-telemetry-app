@@ -20,7 +20,6 @@ public class SplashScreen extends JFrame {
         setSize(480, 320);
         setLocationRelativeTo(null);
         setAlwaysOnTop(true);
-        setBackground(new Color(0, 0, 0, 0));
 
         // Main panel with dark gradient background
         JPanel mainPanel = new JPanel() {
@@ -89,9 +88,6 @@ public class SplashScreen extends JFrame {
         mainPanel.add(statusLabel, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
-
-        // Rounded window shape
-        setShape(new RoundRectangle2D.Float(0, 0, 480, 320, 20, 20));
 
         // Animate the loading bar
         Timer animTimer = new Timer(16, e -> mainPanel.repaint());
