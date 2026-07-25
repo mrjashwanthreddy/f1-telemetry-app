@@ -23,15 +23,15 @@ import java.util.zip.ZipInputStream;
 @Service
 public class UpdateManager {
 
-    @Value("${app.version:0.0.1}")
-    private String currentVersion;
+    @Value("${app.version:0.0.7}")
+    private String currentVersion = "0.0.7";
 
     // Configurable GitHub repo properties
-    @Value("${github.owner:jashwanth-sde}")
-    private String githubOwner;
+    @Value("${github.owner:mrjashwanthreddy}")
+    private String githubOwner = "mrjashwanthreddy";
 
-    @Value("${github.repo:f1-telemetry}")
-    private String githubRepo;
+    @Value("${github.repo:f1-telemetry-app}")
+    private String githubRepo = "f1-telemetry-app";
 
     public void checkForUpdatesAsync(boolean silentIfNoUpdate) {
         new Thread(() -> {

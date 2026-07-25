@@ -40,6 +40,7 @@ public class DesktopLauncher {
     private CefBrowser cefBrowser;
     private boolean isMaximized = false;
     private Rectangle preMaximizeBounds = null;
+    private final com.f1telemetry.update.UpdateManager updateManager = new com.f1telemetry.update.UpdateManager();
 
     public static void main(String[] args) {
         System.setProperty("java.awt.headless", "false");
@@ -57,6 +58,7 @@ public class DesktopLauncher {
                 launcher.createMainWindow(REMOTE_URL);
                 splash.hideSplash();
                 System.out.println("[F1Telemetry] Desktop client launched — connected to " + REMOTE_URL);
+                launcher.updateManager.checkForUpdatesAsync(true);
             } catch (Throwable e) {
                 splash.hideSplash();
                 System.err.println("[F1Telemetry] Failed to initialize: " + e.getMessage());
@@ -399,6 +401,10 @@ public class DesktopLauncher {
             MenuItem openItem = new MenuItem("Open Dashboard");
             openItem.addActionListener(e -> showFromTray());
             popup.add(openItem);
+
+            MenuItem updateItem = new MenuItem("Check for Updates");
+            updateItem.addActionListener(e -> updateManager.checkForUpdatesAsync(false));
+            popup.add(updateItem);
 
             popup.addSeparator();
 
