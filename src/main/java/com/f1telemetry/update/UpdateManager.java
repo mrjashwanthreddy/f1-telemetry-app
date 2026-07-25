@@ -307,13 +307,35 @@ public class UpdateManager {
         }
     }
 
-    private static class GitHubRelease {
+    public GitHubRelease getLatestReleaseInfo() {
+        try {
+            String apiUrl = String.format("https://api.github.com/repos/%s/%s/releases/latest", githubOwner, githubRepo);
+            return fetchLatestGitHubRelease(apiUrl);
+        } catch (Exception e) {
+            log.error("Failed to fetch latest GitHub release: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public String getLatestWindowsZipDownloadUrl() {
+        GitHubRelease release = getLatestReleaseInfo();
+        if (release != null && release.assets != null) {
+            for (GitHubAsset asset : release.assets) {
+                if (asset.name != null && asset.name.toLowerCase().startsWith("f1telemetry-windows") && asset.name.endsWith(".zip")) {
+                    return asset.browserDownloadUrl;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static class GitHubRelease {
         public String tagName;
         public String body;
         public java.util.List<GitHubAsset> assets = new java.util.ArrayList<>();
     }
 
-    private static class GitHubAsset {
+    public static class GitHubAsset {
         public String name;
         public String browserDownloadUrl;
     }
