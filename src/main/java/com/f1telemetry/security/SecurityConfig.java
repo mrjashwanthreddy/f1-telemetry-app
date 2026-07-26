@@ -24,7 +24,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/public/**", "/api/relay/**").permitAll()
                 .requestMatchers("/", "/index.html", "/analytics.html", "/css/**", "/js/**", "/telemetry-websocket/**", "/api/analytics/**").permitAll()
                 .anyRequest().authenticated()
             )
