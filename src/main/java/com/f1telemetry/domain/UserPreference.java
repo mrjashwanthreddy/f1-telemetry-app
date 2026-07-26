@@ -44,12 +44,12 @@ public class UserPreference {
         this.aiEnabled = aiEnabled;
     }
 
-    // UDP ingestion configurations
-    private String udpHost = "127.0.0.1";
+    // UDP ingestion configurations — 0.0.0.0 = listen on all interfaces (required for cloud deployment)
+    private String udpHost = "0.0.0.0";
     private Integer udpPort = 20777;
 
     public String getUdpHost() {
-        return udpHost != null && !udpHost.isBlank() ? udpHost : "127.0.0.1";
+        return udpHost != null && !udpHost.isBlank() ? udpHost : "0.0.0.0";
     }
 
     public int getUdpPort() {
