@@ -338,7 +338,11 @@ function getDamageColor(damageVal) {
 function updateDashboard(data) {
     if (!data || !data.cars) return;
 
-    lastTelemetryReceivedTime = Date.now();
+    // Check if the server has actually received live game UDP packets recently
+    const hasLivePackets = data.lastUpdateTime > 0 && Math.abs(Date.now() - data.lastUpdateTime) < 5000;
+    if (hasLivePackets) {
+        lastTelemetryReceivedTime = Date.now();
+    }
     updateConnectionStatus();
     
     const playerIdx = data.playerCarIndex;
