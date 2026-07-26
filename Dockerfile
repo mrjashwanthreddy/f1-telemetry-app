@@ -16,8 +16,9 @@ RUN mkdir -p /app/logs
 # Copy built jar from build stage
 COPY --from=build /app/target/f1-telemetry-0.0.1-SNAPSHOT.jar app.jar
 
-# Expose HTTP port (default 8080 or PORT env var)
+# Expose HTTP port (default 8080 or PORT env var) and UDP telemetry port
 EXPOSE 8080
+EXPOSE 20777/udp
 
 # Run in headless mode for cloud container hosting
 ENTRYPOINT ["java", "-Djava.awt.headless=true", "-jar", "app.jar"]

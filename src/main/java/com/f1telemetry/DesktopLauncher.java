@@ -1,6 +1,8 @@
 package com.f1telemetry;
 
 import com.f1telemetry.config.SplashScreen;
+import com.f1telemetry.network.LocalTokenServer;
+import com.f1telemetry.network.UdpRelayAgent;
 import me.friwi.jcefmaven.CefAppBuilder;
 import org.cef.CefApp;
 import org.cef.CefClient;
@@ -13,6 +15,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Lightweight desktop launcher that opens the remote F1 Telemetry backend
@@ -42,6 +45,11 @@ public class DesktopLauncher {
     private Rectangle preMaximizeBounds = null;
     private final com.f1telemetry.update.UpdateManager updateManager = new com.f1telemetry.update.UpdateManager();
 
+    /** Shared JWT token — written by LocalTokenServer, read by UdpRelayAgent. */
+    private static final AtomicReference<String> sharedToken = new AtomicReference<>();
+    private final LocalTokenServer localTokenServer = new LocalTokenServer(sharedToken);
+    private final UdpRelayAgent udpRelayAgent = new UdpRelayAgent(sharedToken);
+
     public static void main(String[] args) {
         System.setProperty("java.awt.headless", "false");
 
@@ -51,6 +59,14 @@ public class DesktopLauncher {
 
         // Initialize GUI on EDT
         DesktopLauncher launcher = new DesktopLauncher();
+
+        // Start background relay services BEFORE the browser opens.
+        // LocalTokenServer receives the JWT from auth.js after login.
+        // UdpRelayAgent captures game UDP on 127.0.0.1:20777 and forwards to OCI.
+        // Users never need to change any F1 game settings.
+        launcher.localTokenServer.start();
+        launcher.udpRelayAgent.start();
+
         EventQueue.invokeLater(() -> {
             try {
                 launcher.setupSystemTray();
