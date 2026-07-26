@@ -28,4 +28,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // The endpoint the frontend connects to. SockJS provides fallback options for older browsers.
         registry.addEndpoint("/telemetry-websocket").setAllowedOriginPatterns("*").withSockJS();
     }
+
+    @Override
+    public void configureWebSocketTransport(org.springframework.web.socket.config.annotation.WebSocketTransportRegistration registration) {
+        // High-frequency telemetry updates can exceed default 512KB buffer when streaming over SockJS.
+        // Increase send buffer limit to 10MB and send time limit to 20s to prevent session termination.
+        registration.setMessageSizeLimit(1024 * 1024);        // 1 MB
+        registration.setSendBufferSizeLimit(10 * 1024 * 1024); // 10 MB
+        registration.setSendTimeLimit(20 * 1000);             // 20 seconds
+    }
 }

@@ -45,6 +45,8 @@ const elements = {
 // State handling
 let stompClient = null;
 let isConnecting = false;
+let lastTelemetryReceivedTime = 0;
+let statusCheckInterval = null;
 const MAX_RPM = 13500; // Approx max RPM for F1
 let currentVoiceHotkey = 70;
 let currentVoiceHotkeyLabel = "Scroll Lock";
@@ -255,13 +257,43 @@ function appendEventLog(alertData) {
     }
 }
 
-function setConnected(connected) {
-    if (connected) {
+function updateConnectionStatus() {
+    if (!elements.status) return;
+
+    const isWsConnected = stompClient && (stompClient.connected || (stompClient.ws && stompClient.ws.readyState === 1));
+
+    if (!isWsConnected) {
+        elements.status.textContent = 'DISCONNECTED';
+        elements.status.className = 'status disconnected';
+        return;
+    }
+
+    const now = Date.now();
+    // Only show CONNECTED (LIVE) if telemetry packets have been received in the last 4 seconds
+    if (lastTelemetryReceivedTime > 0 && (now - lastTelemetryReceivedTime < 4000)) {
         elements.status.textContent = 'CONNECTED (LIVE)';
         elements.status.className = 'status connected';
     } else {
-        elements.status.textContent = 'DISCONNECTED';
-        elements.status.className = 'status disconnected';
+        elements.status.textContent = 'WAITING FOR GAME';
+        elements.status.className = 'status waiting';
+    }
+}
+
+function setConnected(connected) {
+    if (connected) {
+        updateConnectionStatus();
+        if (!statusCheckInterval) {
+            statusCheckInterval = setInterval(updateConnectionStatus, 1000);
+        }
+    } else {
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
+        if (elements.status) {
+            elements.status.textContent = 'DISCONNECTED';
+            elements.status.className = 'status disconnected';
+        }
     }
 }
 
@@ -305,6 +337,9 @@ function getDamageColor(damageVal) {
 
 function updateDashboard(data) {
     if (!data || !data.cars) return;
+
+    lastTelemetryReceivedTime = Date.now();
+    updateConnectionStatus();
     
     const playerIdx = data.playerCarIndex;
     const playerCar = data.cars[playerIdx];

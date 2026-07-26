@@ -82,6 +82,13 @@ h1 {
     box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
 }
 
+.status.waiting {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--accent-yellow);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
 /* Grid Layouts */
 
 /* Unified live dashboard: 3 columns [left telemetry | center track/leaderboard | right stats] */
