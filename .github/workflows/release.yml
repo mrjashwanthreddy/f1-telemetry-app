@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          ref: feature/security   # Always build from feature/security branch
 
       - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@v4
@@ -105,7 +103,7 @@ jobs:
             3. On first launch, JCEF will download Chromium (~250MB) automatically
 
             ### Backend
-            - Hosted on Oracle Cloud (Always Free) at `http://f1-telemetry-app.duckdns.org:8080`
+            - Hosted on Oracle Cloud (Always Free) at `http://140.245.219.62:8080`
             - No local server setup required — the app connects to the cloud backend automatically
 
             ### Requirements

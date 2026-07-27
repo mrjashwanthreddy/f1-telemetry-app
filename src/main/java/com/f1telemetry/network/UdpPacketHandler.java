@@ -48,6 +48,24 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
         ByteBuf content = packet.content();
+        processBuffer(content);
+    }
+
+    /**
+     * Entry point for the HTTP relay path (desktop .exe → OCI server).
+     * Wraps raw bytes in a Netty buffer and runs the same parse pipeline
+     * as direct UDP reception.
+     */
+    public void processRawBytes(byte[] bytes) {
+        ByteBuf buf = io.netty.buffer.Unpooled.wrappedBuffer(bytes);
+        try {
+            processBuffer(buf);
+        } finally {
+            buf.release();
+        }
+    }
+
+    private void processBuffer(ByteBuf content) {
         try {
             long count = packetCount.incrementAndGet();
             Object parsedPacket = packetParser.parse(content);

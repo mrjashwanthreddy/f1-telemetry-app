@@ -4,7 +4,7 @@ set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 echo ==============================================
 echo F1 Telemetry - Desktop EXE Builder
-echo Backend: http://f1-telemetry-app.duckdns.org:8080
+echo Backend: http://140.245.219.62:8080
 echo ==============================================
 
 echo.
@@ -64,7 +64,7 @@ echo ==============================================
 echo SUCCESS! Standalone app at: target\dist_new\F1Telemetry\
 echo.
 echo The app connects to the cloud backend at:
-echo   http://f1-telemetry-app.duckdns.org:8080
+echo   http://140.245.219.62:8080
 echo.
 echo NOTE: First launch downloads JCEF Chromium (~250MB)
 echo       to %%USERPROFILE%%\.f1telemetry\jcef

@@ -49,13 +49,24 @@ async function handleAuth(event) {
             const data = await response.json();
             if (data.token) {
                 localStorage.setItem('jwtToken', data.token);
+
+                // Notify the desktop .exe relay agent so it can authenticate
+                // its UDP relay requests to the OCI server.
+                // Silently ignored if running in a plain browser (no .exe).
+                fetch('http://127.0.0.1:17777/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: data.token
+                }).catch(() => { /* running in browser-only mode — expected */ });
+
                 showDashboard();
             } else {
                 showError("No token received from server.");
             }
         } else {
-            // Registration successful! It returns plain text, not JSON.
-            // Let's automatically switch to login mode and pre-fill the username
+            // Registration successful! Clear fields and switch to login mode.
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
             toggleAuthMode();
             document.getElementById('auth-error').style.display = 'block';
             document.getElementById('auth-error').style.backgroundColor = 'rgba(0, 255, 0, 0.2)';

@@ -16,5 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build: .                         # builds from Dockerfile in same directory
+    image: f1-telemetry-app:latest
+    container_name: f1-telemetry-app
+    ports:
+      - "8080:8080"          # HTTP dashboard
+      - "20777:20777/udp"    # F1 game UDP telemetry — REQUIRED for game data ingestion
+    environment:
+      - GEMINI_KEY=${GEMINI_KEY:-}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:

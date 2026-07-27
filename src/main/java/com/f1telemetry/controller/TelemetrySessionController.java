@@ -37,10 +37,16 @@ public class TelemetrySessionController {
             activeUserService.setActiveUser(user);
             log.info("User {} is now the Active Player. UDP Telemetry will be attributed to this user.", username);
             
-            // Fetch this user's preferences and adjust the UDP host/port dynamically
+            // Fetch this user's preferences and adjust the UDP host/port dynamically.
+            // Force 0.0.0.0 if the stored value is the old loopback default (127.0.0.1),
+            // which only worked for local installs, not cloud deployments.
             try {
                 UserPreference prefs = preferenceService.getPreferences(username);
-                udpServer.restart(prefs.getUdpHost(), prefs.getUdpPort());
+                String udpHost = prefs.getUdpHost();
+                if ("127.0.0.1".equals(udpHost)) {
+                    udpHost = "0.0.0.0";
+                }
+                udpServer.restart(udpHost, prefs.getUdpPort());
             } catch (Exception e) {
                 log.error("Failed to load user preferences and restart UDP server on session start", e);
             }

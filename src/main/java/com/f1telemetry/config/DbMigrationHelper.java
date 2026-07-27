@@ -31,6 +31,13 @@ public class DbMigrationHelper implements CommandLineRunner {
                     "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS udp_host VARCHAR(255) DEFAULT '127.0.0.1'");
             jdbcTemplate
                     .execute("ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS udp_port INTEGER DEFAULT 20777");
+
+            // Ensure telemetry_records table columns exist for high-speed batch inserts
+            jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS engine_rpm INTEGER DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS lap_distance REAL DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS steer REAL DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS g_force_lateral REAL DEFAULT 0");
+
             log.info("[DbMigration] Database schema validation completed successfully.");
         } catch (Exception e) {
             log.error("[DbMigration] Failed to run schema validation check: {}", e.getMessage());
