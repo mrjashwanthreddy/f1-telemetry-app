@@ -141,7 +141,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>com.f1telemetry.DesktopLauncher</mainClass>
+					<mainClass>com.f1telemetry.F1TelemetryApplication</mainClass>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>
