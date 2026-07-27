@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DesktopLauncher {
 
-    private static final String REMOTE_URL = "http://f1-telemetry-app.duckdns.org:8080";
+    private static final String REMOTE_URL = "http://140.245.219.62:8080";
 
     // Colors matching the F1 dashboard dark theme
     private static final Color BG_DARK = new Color(15, 23, 42);
