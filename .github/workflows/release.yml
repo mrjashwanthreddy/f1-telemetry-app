@@ -29,6 +29,11 @@ jobs:
         shell: pwsh
         run: |
           $props = Get-Content src/main/resources/application.properties
+          if ('${{ github.ref_name }}' -match '^v?([0-9]+\.[0-9]+\.[0-9]+)') {
+              $tagVer = $Matches[1]
+              $props = $props -replace 'app\.version=.*', "app.version=$tagVer"
+              echo "Synced app.version to tag: $tagVer"
+          }
           $props = $props -replace 'gemini\.api\.key=.*',         'gemini.api.key=${{ secrets.GEMINI_KEY }}'
           $props = $props -replace 'razorpay\.key\.id=.*',        'razorpay.key.id=${{ secrets.RAZORPAY_KEY_ID }}'
           $props = $props -replace 'razorpay\.key\.secret=.*',    'razorpay.key.secret=${{ secrets.RAZORPAY_KEY_SECRET }}'

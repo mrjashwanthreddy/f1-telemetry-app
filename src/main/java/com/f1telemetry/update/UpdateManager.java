@@ -114,8 +114,10 @@ public class UpdateManager {
         if (latestTag == null || current == null) return false;
         
         // Strip any leading "v" or non-numeric prefixes (e.g. v1.0.0 -> 1.0.0)
-        String latest = latestTag.replaceAll("^[^0-9]+", "");
-        String curr = current.replaceAll("^[^0-9]+", "");
+        String latest = latestTag.replaceAll("^[^0-9.]+", "");
+        String curr = current.replaceAll("^[^0-9.]+", "");
+
+        if (latest.trim().equalsIgnoreCase(curr.trim())) return false;
 
         String[] latestParts = latest.split("\\.");
         String[] currentParts = curr.split("\\.");
