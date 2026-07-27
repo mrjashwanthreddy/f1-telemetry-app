@@ -23,15 +23,43 @@ import java.util.zip.ZipInputStream;
 @Service
 public class UpdateManager {
 
-    @Value("${app.version:0.0.7}")
-    private String currentVersion = "0.0.7";
-
-    // Configurable GitHub repo properties
-    @Value("${github.owner:mrjashwanthreddy}")
+    private String currentVersion;
     private String githubOwner = "mrjashwanthreddy";
-
-    @Value("${github.repo:f1-telemetry-app}")
     private String githubRepo = "f1-telemetry-app";
+
+    public UpdateManager() {
+        loadPropertiesFromClasspath();
+    }
+
+    private void loadPropertiesFromClasspath() {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+            if (is != null) {
+                java.util.Properties props = new java.util.Properties();
+                props.load(is);
+                if (props.containsKey("app.version")) {
+                    String ver = props.getProperty("app.version").trim();
+                    if (!ver.isEmpty()) {
+                        this.currentVersion = ver;
+                    }
+                }
+                if (props.containsKey("github.owner")) {
+                    String owner = props.getProperty("github.owner").trim();
+                    if (!owner.isEmpty()) {
+                        this.githubOwner = owner;
+                    }
+                }
+                if (props.containsKey("github.repo")) {
+                    String repo = props.getProperty("github.repo").trim();
+                    if (!repo.isEmpty()) {
+                        this.githubRepo = repo;
+                    }
+                }
+                log.info("[UpdateManager] Current application version loaded: '{}'", this.currentVersion);
+            }
+        } catch (Exception e) {
+            log.warn("[UpdateManager] Failed to load application.properties: {}", e.getMessage());
+        }
+    }
 
     public void checkForUpdatesAsync(boolean silentIfNoUpdate) {
         new Thread(() -> {
