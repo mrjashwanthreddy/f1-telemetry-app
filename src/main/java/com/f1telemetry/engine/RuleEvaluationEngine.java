@@ -378,6 +378,17 @@ public class RuleEvaluationEngine {
             return;
         }
 
+        // Detect lap reset (e.g. Return to Garage, Session Restart, Flying Lap Restart)
+        if (playerCar.getCurrentLapNum() < lastSeenLap) {
+            log.info("Lap reset detected (Game lap {} < lastSeenLap {}). Resetting tracking cache.",
+                     playerCar.getCurrentLapNum(), lastSeenLap);
+            lastSeenLap = playerCar.getCurrentLapNum();
+            cachedS1 = 0;
+            cachedS2 = 0;
+            lastSeenSector = playerCar.getSector();
+            return;
+        }
+
         // Cache sectors while still in the lap
         if (playerCar.getSector1TimeInMS() > 0)
             cachedS1 = playerCar.getSector1TimeInMS();
@@ -393,27 +404,41 @@ public class RuleEvaluationEngine {
             lastSeenSector = currentSector;
         }
 
-        // Lap incremented → previous lap is complete, persist it
+        // Lap incremented → previous lap is complete, persist it if valid
         if (playerCar.getCurrentLapNum() > lastSeenLap && playerCar.getLastLapTimeInMS() > 0) {
-            int completedLapDbNum = lastSeenLap + currentLapOffset;
-            log.info("Lap {} (Game lap {}) completed in session {}. Saving to database as lap {}.", 
-                     lastSeenLap, lastSeenLap, currentDbSessionId, completedLapDbNum);
-            saveLapRecord((short) completedLapDbNum, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
+            // Only persist lap if sector 1 and sector 2 were completed during this lap
+            // (prevents incomplete out-laps or garage restarts from being saved as fake ghost laps)
+            if (cachedS1 > 0 && cachedS2 > 0 && playerCar.getLastLapTimeInMS() > (cachedS1 + cachedS2)) {
+                RaceSession session = createOrGetSession(state);
+                int nextLapDbNum = 1;
+                if (session != null) {
+                    Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
+                    if (maxLapNum != null) {
+                        nextLapDbNum = maxLapNum + 1;
+                    }
+                }
+                log.info("Lap {} completed (Last lap time {}ms). Saving to database as sequential lap {}.", 
+                         lastSeenLap, playerCar.getLastLapTimeInMS(), nextLapDbNum);
+                saveLapRecord((short) nextLapDbNum, cachedS1, cachedS2, (int) playerCar.getLastLapTimeInMS(), state);
 
-            // Phase 10: Fire AI lap alert async (non-blocking — never delays telemetry pipeline)
-            if (prefs != null && prefs.isAiEnabled()) {
-                aiLapAlertService.fireLapAlertAsync(
-                    completedLapDbNum, cachedS1, cachedS2,
-                    (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2,
-                    (int) playerCar.getLastLapTimeInMS(), state
-                );
+                // Phase 10: Fire AI lap alert async (non-blocking — never delays telemetry pipeline)
+                if (prefs != null && prefs.isAiEnabled()) {
+                    aiLapAlertService.fireLapAlertAsync(
+                        nextLapDbNum, cachedS1, cachedS2,
+                        (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2,
+                        (int) playerCar.getLastLapTimeInMS(), state
+                    );
+                }
+
+                // If the completed lap updated sector records, verify them
+                if (cachedS1 > 0 && cachedS1 < bestSector1TimeMs) bestSector1TimeMs = cachedS1;
+                if (cachedS2 > 0 && cachedS2 < bestSector2TimeMs) bestSector2TimeMs = cachedS2;
+                int s3 = (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2;
+                if (s3 > 0 && s3 < bestSector3TimeMs) bestSector3TimeMs = s3;
+            } else {
+                log.info("Discarding incomplete lap {} (S1={}ms, S2={}ms, LastLapTime={}ms) - driver likely restarted or returned to garage.", 
+                         lastSeenLap, cachedS1, cachedS2, playerCar.getLastLapTimeInMS());
             }
-
-            // If the completed lap updated sector records, verify them
-            if (cachedS1 > 0 && cachedS1 < bestSector1TimeMs) bestSector1TimeMs = cachedS1;
-            if (cachedS2 > 0 && cachedS2 < bestSector2TimeMs) bestSector2TimeMs = cachedS2;
-            int s3 = (int) playerCar.getLastLapTimeInMS() - cachedS1 - cachedS2;
-            if (s3 > 0 && s3 < bestSector3TimeMs) bestSector3TimeMs = s3;
 
             lastSeenLap = playerCar.getCurrentLapNum();
             cachedS1 = 0;
@@ -505,20 +530,19 @@ public class RuleEvaluationEngine {
         int playerIdx = state.getPlayerCarIndex();
         com.f1telemetry.state.CarState playerCar = state.getCars()[playerIdx];
         
-        if (playerCar.getLastLapTimeInMS() > 0) {
-            int completedLapDbNum = lastSeenLap + currentLapOffset;
-            
+        int s1 = playerCar.getSector1TimeInMS() > 0 ? playerCar.getSector1TimeInMS() : cachedS1;
+        int s2 = playerCar.getSector2TimeInMS() > 0 ? playerCar.getSector2TimeInMS() : cachedS2;
+
+        if (playerCar.getLastLapTimeInMS() > 0 && s1 > 0 && s2 > 0 && playerCar.getLastLapTimeInMS() > (s1 + s2)) {
             RaceSession session = sessionRepository.findBySessionId(currentDbSessionId).orElse(null);
             if (session != null) {
+                Integer maxLapNum = lapRepository.findMaxLapNumberByRaceSession(session);
+                int completedLapDbNum = (maxLapNum == null ? 0 : maxLapNum) + 1;
+
                 boolean exists = lapRepository.existsByRaceSessionAndLapNumber(session, completedLapDbNum);
                 if (!exists) {
-                    log.info("Saving final lap {} (Game lap {}) to database as lap {} on session end.", 
-                             lastSeenLap, lastSeenLap, completedLapDbNum);
-                    
-                    int s1 = playerCar.getSector1TimeInMS();
-                    int s2 = playerCar.getSector2TimeInMS();
-                    if (s1 == 0) s1 = cachedS1;
-                    if (s2 == 0) s2 = cachedS2;
+                    log.info("Saving final lap {} to database as sequential lap {} on session end.", 
+                             lastSeenLap, completedLapDbNum);
                     
                     int s3 = (int) playerCar.getLastLapTimeInMS() - s1 - s2;
                     if (s3 < 0) s3 = 0;

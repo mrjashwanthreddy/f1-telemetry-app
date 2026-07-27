@@ -21,6 +21,7 @@ public class TelemetryRecord {
     private int speed;
     private float throttle;
     private float brake;
+    @Column(name = "engine_rpm")
     private int engineRPM;
 
     // Phase 10: Corner zone analysis fields
