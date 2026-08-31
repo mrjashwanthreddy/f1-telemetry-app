@@ -799,3 +799,37 @@ function getWeatherName(weatherId) {
 function handleLiveAlert(alert) {
     console.log('[Pit Wall Alert]', alert);
 }
+
+// ── Mobile / Tablet View Switcher ─────────────────────────────────────────
+function switchMobilePitwallView(view, btn) {
+    const towerCol = document.getElementById('pitwall-left-col');
+    const mainGrid = document.querySelector('.pitwall-main-grid');
+    const tabBtns = document.querySelectorAll('.mobile-tab-btn');
+
+    tabBtns.forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (window.innerWidth <= 1024) {
+        if (view === 'tower') {
+            if (towerCol) towerCol.style.display = 'flex';
+            if (mainGrid) mainGrid.style.display = 'none';
+        } else {
+            if (towerCol) towerCol.style.display = 'none';
+            if (mainGrid) mainGrid.style.display = 'grid';
+        }
+    }
+}
+
+// Reset mobile displays on resize back to desktop
+window.addEventListener('resize', () => {
+    const towerCol = document.getElementById('pitwall-left-col');
+    const mainGrid = document.querySelector('.pitwall-main-grid');
+    if (window.innerWidth > 1024) {
+        if (towerCol) towerCol.style.display = '';
+        if (mainGrid) mainGrid.style.display = '';
+    } else {
+        const activeBtn = document.querySelector('.mobile-tab-btn.active');
+        const view = activeBtn && activeBtn.id === 'btn-tab-tower' ? 'tower' : 'telemetry';
+        switchMobilePitwallView(view, activeBtn);
+    }
+});

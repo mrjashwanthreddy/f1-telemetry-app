@@ -354,3 +354,21 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
 }
+
+/* Responsive Timing Tower Rules */
+@media (max-width: 1024px) {
+    .timing-tower-container {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .tower-driver-row {
+        height: 38px;
+        padding: 0 10px;
+    }
+
+    .tower-driver-name {
+        font-size: 0.92rem;
+    }
+}

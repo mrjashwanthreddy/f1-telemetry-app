@@ -1311,3 +1311,311 @@ body.engineer-body {
 .pin-input-group button:active {
     transform: translateY(0);
 }
+
+/* ==========================================================================
+   MOBILE & TABLET / IPAD RESPONSIVE DESIGN SYSTEM
+   ========================================================================== */
+
+/* Mobile View Tabs */
+.mobile-view-tabs {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    margin: 8px 14px 0;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
+}
+
+.mobile-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #6b21a8;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.mobile-tab-btn.active {
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.35);
+}
+
+/* Table Responsive Wrapper */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar {
+    height: 4px;
+}
+
+/* ── Breakpoint: Large Tablets & Laptops (<= 1280px) ──────────────────────── */
+@media (max-width: 1280px) {
+    .pitwall-workspace {
+        padding: 10px 14px;
+        gap: 12px;
+    }
+
+    .pitwall-main-grid {
+        gap: 10px;
+    }
+
+    .halo-hud-center-dial {
+        width: 190px;
+        height: 190px;
+    }
+
+    .dial-speed-kmh-val {
+        font-size: 2.5rem;
+    }
+}
+
+/* ── Breakpoint: iPad / Tablets Landscape & Portrait (<= 1024px) ──────────── */
+@media (max-width: 1024px) {
+    body.engineer-body {
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100vh;
+    }
+
+    .mobile-view-tabs {
+        display: flex;
+    }
+
+    .pitwall-workspace {
+        flex-direction: column;
+        height: auto !important;
+        min-height: calc(100vh - 120px);
+        padding: 10px 14px 28px;
+        gap: 12px;
+        overflow: visible !important;
+    }
+
+    .pitwall-left-col {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        display: none; /* Controlled by mobile tabs */
+    }
+
+    .timing-tower-container {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: 75vh;
+    }
+
+    .timing-tower-rows {
+        max-height: 55vh;
+        overflow-y: auto;
+    }
+
+    .pitwall-main-grid {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+        overflow: visible !important;
+        gap: 12px;
+        padding-right: 0;
+    }
+
+    .f1-halo-hud-container {
+        justify-content: space-around;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .halo-hud-wing {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* ── Breakpoint: Mobile Phones (<= 768px) ─────────────────────────────────── */
+@media (max-width: 768px) {
+    .engineer-header {
+        padding: 8px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .engineer-brand h1 {
+        font-size: 1.15rem;
+    }
+
+    .session-ribbon {
+        width: 100%;
+        order: 3;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        gap: 6px;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .session-ribbon::-webkit-scrollbar {
+        height: 2px;
+    }
+
+    .ribbon-item {
+        padding: 3px 8px;
+        flex-shrink: 0;
+    }
+
+    .driver-select-container {
+        margin-left: auto;
+        gap: 6px;
+    }
+
+    .driver-pill {
+        padding: 4px 10px;
+    }
+
+    .driver-pill .driver-name {
+        font-size: 0.82rem;
+    }
+
+    /* Driver Status Strip */
+    .pit-driver-strip {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .strip-quick-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .quick-stat-box {
+        padding: 4px 8px;
+    }
+
+    .quick-stat-label {
+        font-size: 0.58rem;
+    }
+
+    .quick-stat-val {
+        font-size: 0.85rem;
+    }
+
+    /* Halo HUD Cluster */
+    .f1-halo-hud-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .halo-hud-left,
+    .halo-hud-right {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .halo-hud-center-dial {
+        width: 175px;
+        height: 175px;
+    }
+
+    .dial-speed-kmh-val {
+        font-size: 2.4rem;
+    }
+
+    .halo-hud-wing {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .gears-sequence-bar {
+        gap: 2px;
+    }
+
+    .gear-slot {
+        padding: 2px 4px;
+        font-size: 0.74rem;
+    }
+
+    /* Tyre Thermals & Wear Grid */
+    .tyres-thermal-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .tyre-corner-box {
+        padding: 8px 10px;
+    }
+
+    /* Weather Forecast Timeline */
+    .forecast-timeline-row {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+    }
+
+    .forecast-pill {
+        padding: 4px 2px;
+    }
+
+    .forecast-time {
+        font-size: 0.6rem;
+    }
+
+    .forecast-rain {
+        font-size: 0.62rem;
+    }
+
+    /* Pairing Modal Card */
+    .pairing-modal-card {
+        width: 92vw;
+        max-width: 440px;
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+}
+
+/* ── Breakpoint: Small Mobile (<= 480px) ──────────────────────────────────── */
+@media (max-width: 480px) {
+    .strip-quick-stats {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .halo-hud-center-dial {
+        width: 160px;
+        height: 160px;
+    }
+
+    .dial-speed-kmh-val {
+        font-size: 2.1rem;
+    }
+
+    .tyres-thermal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .strategy-grid-compact {
+        grid-template-columns: 1fr;
+    }
+}
