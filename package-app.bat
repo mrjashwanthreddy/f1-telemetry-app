@@ -10,7 +10,7 @@ echo ==============================================
 echo.
 echo [1/5] Cleaning old build output...
 if exist "target\custom-runtime" rd /s /q "target\custom-runtime"
-if exist "target\dist_new"       rd /s /q "target\dist_new"
+if exist "target\dist"           rd /s /q "target\dist"
 if exist "target\input"          rd /s /q "target\input"
 
 echo.
@@ -42,7 +42,7 @@ echo.
 echo [5/5] Packaging into standalone EXE (jpackage)...
 jpackage ^
   --type app-image ^
-  --dest target\dist_new ^
+  --dest target\dist ^
   --name F1Telemetry ^
   --input target\input ^
   --main-jar f1-telemetry-0.0.1-SNAPSHOT.jar ^
@@ -61,7 +61,7 @@ if %ERRORLEVEL% neq 0 (
 
 echo.
 echo ==============================================
-echo SUCCESS! Standalone app at: target\dist_new\F1Telemetry\
+echo SUCCESS! Standalone app at: target\dist\F1Telemetry\
 echo.
 echo The app connects to the cloud backend at:
 echo   http://140.245.219.62:8080
