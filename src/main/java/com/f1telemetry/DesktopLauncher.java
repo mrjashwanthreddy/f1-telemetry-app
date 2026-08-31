@@ -107,13 +107,10 @@ public class DesktopLauncher {
             builder.getCefSettings().browser_subprocess_path = helperExe.getAbsolutePath();
         }
 
-        builder.addJcefArgs("--disable-gpu");
-        builder.addJcefArgs("--disable-gpu-compositing");
-        builder.addJcefArgs("--disable-direct-composition");
         builder.addJcefArgs("--disable-gpu-shader-disk-cache");
-        builder.addJcefArgs("--disable-gpu-rasterization");
         builder.addJcefArgs("--disable-gpu-process-crash-limit");
-        builder.addJcefArgs("--use-gl=disabled");
+        builder.addJcefArgs("--autoplay-policy=no-user-gesture-required");
+        builder.addJcefArgs("--disable-features=CalculateNativeWinOcclusion");
 
         cefApp = builder.build();
         cefClient = cefApp.createClient();
@@ -173,14 +170,15 @@ public class DesktopLauncher {
 
         addResizeBehavior(mainFrame);
 
-        mainFrame.setVisible(true);
-        mainFrame.toFront();
-
         cefBrowser = cefClient.createBrowser(url, false, false);
         Component browserUI = cefBrowser.getUIComponent();
         mainFrame.add(browserUI, BorderLayout.CENTER);
+
+        mainFrame.setVisible(true);
+        mainFrame.toFront();
         mainFrame.revalidate();
         mainFrame.repaint();
+        browserUI.requestFocus();
     }
 
     // ── Title Bar ─────────────────────────────────────────────────────────────

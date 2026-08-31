@@ -117,13 +117,10 @@ public class AppGuiLauncher {
         }
 
         // Standard CEF arguments for Java Swing windowed embedding on Windows
-        builder.addJcefArgs("--disable-gpu");
-        builder.addJcefArgs("--disable-gpu-compositing");
-        builder.addJcefArgs("--disable-direct-composition");
         builder.addJcefArgs("--disable-gpu-shader-disk-cache");
-        builder.addJcefArgs("--disable-gpu-rasterization");
         builder.addJcefArgs("--disable-gpu-process-crash-limit");
-        builder.addJcefArgs("--use-gl=disabled");
+        builder.addJcefArgs("--autoplay-policy=no-user-gesture-required");
+        builder.addJcefArgs("--disable-features=CalculateNativeWinOcclusion");
 
         cefApp = builder.build();
         cefClient = cefApp.createClient();
@@ -190,17 +187,16 @@ public class AppGuiLauncher {
         // Enable window resizing on undecorated frame
         addResizeBehavior(mainFrame);
 
-        // MUST call setVisible(true) FIRST so AWT realizes the native Win32 HWND peer
-        // before JCEF attaches the C++ Chromium browser instance
-        mainFrame.setVisible(true);
-        mainFrame.toFront();
-
         // Create embedded Chromium browser in windowed mode
         cefBrowser = cefClient.createBrowser(url, false, false);
         java.awt.Component browserUI = cefBrowser.getUIComponent();
         mainFrame.add(browserUI, BorderLayout.CENTER);
+
+        mainFrame.setVisible(true);
+        mainFrame.toFront();
         mainFrame.revalidate();
         mainFrame.repaint();
+        browserUI.requestFocus();
 
         logger.info("Main application window created and visible.");
     }

@@ -9,9 +9,11 @@ echo ==============================================
 
 echo.
 echo [1/5] Cleaning old build output...
-if exist "target\custom-runtime" rd /s /q "target\custom-runtime"
-if exist "target\dist"           rd /s /q "target\dist"
-if exist "target\input"          rd /s /q "target\input"
+taskkill /F /IM F1Telemetry.exe /T 2>nul
+taskkill /F /IM jcef_helper.exe /T 2>nul
+if exist "target\custom-runtime" rd /s /q "target\custom-runtime" 2>nul
+if exist "target\dist"           rd /s /q "target\dist" 2>nul
+if exist "target\input"          rd /s /q "target\input" 2>nul
 
 echo.
 echo [2/5] Building Spring Boot fat JAR (Maven)...
