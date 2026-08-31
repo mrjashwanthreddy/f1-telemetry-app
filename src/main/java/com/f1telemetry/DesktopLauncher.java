@@ -115,6 +115,21 @@ public class DesktopLauncher {
         cefApp = builder.build();
         cefClient = cefApp.createClient();
 
+        // Display console messages from web page
+        cefClient.addDisplayHandler(new org.cef.handler.CefDisplayHandlerAdapter() {
+            @Override
+            public boolean onConsoleMessage(CefBrowser browser, org.cef.CefSettings.LogSeverity level,
+                                            String message, String source, int line) {
+                System.out.println("[CEF Console] " + source + ":" + line + " -> " + message);
+                return false;
+            }
+
+            @Override
+            public void onAddressChange(CefBrowser browser, org.cef.browser.CefFrame frame, String url) {
+                System.out.println("[CEF Address] -> " + url);
+            }
+        });
+
         // Open popups in the user's default system browser
         cefClient.addLifeSpanHandler(new CefLifeSpanHandlerAdapter() {
             @Override
@@ -137,8 +152,19 @@ public class DesktopLauncher {
         // Display rich dark-themed offline error page when the server is unreachable
         cefClient.addLoadHandler(new org.cef.handler.CefLoadHandlerAdapter() {
             @Override
+            public void onLoadStart(CefBrowser browser, org.cef.browser.CefFrame frame, org.cef.network.CefRequest.TransitionType transitionType) {
+                System.out.println("[CEF LoadStart] Loading: " + frame.getURL());
+            }
+
+            @Override
+            public void onLoadEnd(CefBrowser browser, org.cef.browser.CefFrame frame, int httpStatusCode) {
+                System.out.println("[CEF LoadEnd] Loaded: " + frame.getURL() + " (HTTP " + httpStatusCode + ")");
+            }
+
+            @Override
             public void onLoadError(CefBrowser browser, org.cef.browser.CefFrame frame,
                                     org.cef.handler.CefLoadHandler.ErrorCode errorCode, String errorText, String failedUrl) {
+                System.err.println("[CEF LoadError] " + errorCode + " (" + errorText + ") on " + failedUrl);
                 if (frame.isMain() && errorCode != org.cef.handler.CefLoadHandler.ErrorCode.ERR_NONE && errorCode != org.cef.handler.CefLoadHandler.ErrorCode.ERR_ABORTED) {
                     String offlineHtml = buildOfflineHtmlPage(failedUrl);
                     String base64Html = java.util.Base64.getEncoder().encodeToString(offlineHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -178,7 +204,19 @@ public class DesktopLauncher {
         mainFrame.toFront();
         mainFrame.revalidate();
         mainFrame.repaint();
-        browserUI.requestFocus();
+
+        // Ensure browser receives initial layout notification
+        SwingUtilities.invokeLater(() -> {
+            if (browserUI != null) {
+                browserUI.setBounds(0, 36, mainFrame.getWidth(), mainFrame.getHeight() - 36);
+                browserUI.requestFocus();
+            }
+            if (cefBrowser != null) {
+                cefBrowser.setFocus(true);
+            }
+            mainFrame.revalidate();
+            mainFrame.repaint();
+        });
     }
 
     // ── Title Bar ─────────────────────────────────────────────────────────────

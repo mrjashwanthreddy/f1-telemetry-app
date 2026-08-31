@@ -12,10 +12,12 @@ Write-Host "`n[1/5] Stopping any running instances..." -ForegroundColor Yellow
 Get-Process -Name "F1Telemetry*", "jcef_helper*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 
-# 2. Clean output folders
-Write-Host "`n[2/5] Cleaning old build directories..." -ForegroundColor Yellow
+# 2. Clean output folders and stale CEF cache
+Write-Host "`n[2/5] Cleaning old build directories and CEF cache..." -ForegroundColor Yellow
 if (Test-Path "target\dist") { Remove-Item -Path "target\dist" -Recurse -Force -ErrorAction SilentlyContinue }
 if (Test-Path "target\input") { Remove-Item -Path "target\input" -Recurse -Force -ErrorAction SilentlyContinue }
+$CefCache = "$env:USERPROFILE\.f1telemetry\jcef\cache"
+if (Test-Path $CefCache) { Remove-Item -Path $CefCache -Recurse -Force -ErrorAction SilentlyContinue }
 
 # 3. Build Fat JAR
 Write-Host "`n[3/5] Building Spring Boot fat JAR (Maven)..." -ForegroundColor Yellow
