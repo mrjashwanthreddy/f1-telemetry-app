@@ -14,20 +14,30 @@ public class TelemetryRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String sessionId; // Simplification: we'll use a string for the session
-    private int currentLapNum;
-    private long timestamp;
+    private String sessionId;
+    private Integer currentLapNum;
+    private Long timestamp;
 
-    private int speed;
-    private float throttle;
-    private float brake;
+    private Integer speed;
+    private Float throttle;
+    private Float brake;
     @Column(name = "engine_rpm")
-    private int engineRPM;
+    private Integer engineRPM;
 
     // Phase 10: Corner zone analysis fields
-    private float lapDistance;   // metres into current lap — key for corner zone detection
-    private float steer;         // steering input (-1.0 left to +1.0 right)
-    private float gForceLateral; // lateral G-force — identifies actual cornering load
+    private Float lapDistance;   // metres into current lap — key for corner zone detection
+    private Float steer;         // steering input (-1.0 left to +1.0 right)
+    private Float gForceLateral; // lateral G-force — identifies actual cornering load
+
+    public int getCurrentLapNum() { return currentLapNum != null ? currentLapNum : 0; }
+    public long getTimestamp() { return timestamp != null ? timestamp : 0L; }
+    public int getSpeed() { return speed != null ? speed : 0; }
+    public float getThrottle() { return throttle != null ? throttle : 0.0f; }
+    public float getBrake() { return brake != null ? brake : 0.0f; }
+    public int getEngineRPM() { return engineRPM != null ? engineRPM : 0; }
+    public float getLapDistance() { return lapDistance != null ? lapDistance : 0.0f; }
+    public float getSteer() { return steer != null ? steer : 0.0f; }
+    public float getGForceLateral() { return gForceLateral != null ? gForceLateral : 0.0f; }
 
     public TelemetryRecord(String sessionId, int currentLapNum, long timestamp,
                            int speed, float throttle, float brake, int engineRPM,

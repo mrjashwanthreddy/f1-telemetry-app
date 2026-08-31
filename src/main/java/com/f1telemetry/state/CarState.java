@@ -40,7 +40,11 @@ public class CarState {
 
     // Status
     private float fuelInTank;
+    private float fuelRemainingLaps;
     private float ersStoreEnergy;
+    private short ersDeployMode;       // 0=NONE, 1=MEDIUM, 2=HOTLAP, 3=OVERTAKE
+    private short drs;                 // 0=OFF, 1=ON
+    private short drsAllowed;          // 0=NOT ALLOWED, 1=ALLOWED
     private short visualTyreCompound;
     private short tyresAgeLaps;        // Phase 10: laps on current tyre set
     

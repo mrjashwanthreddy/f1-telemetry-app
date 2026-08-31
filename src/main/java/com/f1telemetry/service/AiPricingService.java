@@ -19,29 +19,19 @@ public class AiPricingService {
 
     // Rates per 1,000,000 units in USD
     private static final Map<String, Double> INPUT_TOKEN_RATES = Map.ofEntries(
-        Map.entry("gemini-3.5-pro", 1.25),
-        Map.entry("gemini-3.5-flash", 0.075),
         Map.entry("gemini-3.1-flash-lite", 0.0375),
-        Map.entry("gemini-2.5-flash", 0.075),
-        Map.entry("gemini-2.5-flash-lite", 0.075),
-        Map.entry("gemini-2.0-flash", 0.075),
-        Map.entry("gemini-1.5-flash", 0.075),
-        Map.entry("gemini-1.5-flash-8b", 0.0375),
-        Map.entry("gemini-2.5-pro", 1.25),
-        Map.entry("gemini-1.5-pro", 1.25)
+        Map.entry("gemini-3-flash", 0.075),
+        Map.entry("gemini-3.1-pro", 1.25),
+        Map.entry("gemini-2.5-flash-lite", 0.0375),
+        Map.entry("gemini-2.0-flash", 0.075)
     );
 
     private static final Map<String, Double> OUTPUT_TOKEN_RATES = Map.ofEntries(
-        Map.entry("gemini-3.5-pro", 5.00),
-        Map.entry("gemini-3.5-flash", 0.30),
         Map.entry("gemini-3.1-flash-lite", 0.15),
-        Map.entry("gemini-2.5-flash", 0.30),
-        Map.entry("gemini-2.5-flash-lite", 0.30),
-        Map.entry("gemini-2.0-flash", 0.30),
-        Map.entry("gemini-1.5-flash", 0.30),
-        Map.entry("gemini-1.5-flash-8b", 0.15),
-        Map.entry("gemini-2.5-pro", 5.00),
-        Map.entry("gemini-1.5-pro", 5.00)
+        Map.entry("gemini-3-flash", 0.30),
+        Map.entry("gemini-3.1-pro", 5.00),
+        Map.entry("gemini-2.5-flash-lite", 0.15),
+        Map.entry("gemini-2.0-flash", 0.30)
     );
 
     // Google Cloud TTS: $16.00 per 1,000,000 characters for Neural Voices

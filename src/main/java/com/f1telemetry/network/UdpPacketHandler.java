@@ -150,6 +150,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     state.setThrottle(throttle);
                     state.setBrake(ct.getBrake());
                     state.setSteer(ct.getSteer());
+                    state.setDrs(ct.getDrs());
                     System.arraycopy(ct.getTyresSurfaceTemperature(), 0, state.getTyreSurfaceTemps(), 0, 4);
                     System.arraycopy(ct.getBrakesTemperature(), 0, state.getBrakesTemperature(), 0, 4);
                 }
@@ -168,25 +169,22 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     // Track sector times on lap completion
                     if (newLap > oldLap && oldLap > 0) {
                         long lastLapTime = lap.getLastLapTimeInMS();
-                        int completedS1 = carState.getSector1TimeInMS();
-                        int completedS2 = carState.getSector2TimeInMS();
-                        
-                        if (lastLapTime > 0 && completedS1 > 0 && completedS2 > 0) {
-                            int completedS3 = (int) lastLapTime - completedS1 - completedS2;
-                            if (completedS3 > 0) {
-                                carState.setLastLapSector1TimeInMS(completedS1);
-                                carState.setLastLapSector2TimeInMS(completedS2);
-                                carState.setLastLapSector3TimeInMS(completedS3);
+                        if (lastLapTime > 0) {
+                            int s3 = (int) lastLapTime - s1 - s2;
+                            if (s3 > 0 && s1 > 0 && s2 > 0) {
+                                carState.setLastLapSector1TimeInMS(s1);
+                                carState.setLastLapSector2TimeInMS(s2);
+                                carState.setLastLapSector3TimeInMS(s3);
                                 
                                 // Update driver's personal best sector times
-                                if (carState.getBestSector1TimeInMS() == 0 || completedS1 < carState.getBestSector1TimeInMS()) {
-                                    carState.setBestSector1TimeInMS(completedS1);
+                                if (carState.getBestSector1TimeInMS() == 0 || s1 < carState.getBestSector1TimeInMS()) {
+                                    carState.setBestSector1TimeInMS(s1);
                                 }
-                                if (carState.getBestSector2TimeInMS() == 0 || completedS2 < carState.getBestSector2TimeInMS()) {
-                                    carState.setBestSector2TimeInMS(completedS2);
+                                if (carState.getBestSector2TimeInMS() == 0 || s2 < carState.getBestSector2TimeInMS()) {
+                                    carState.setBestSector2TimeInMS(s2);
                                 }
-                                if (carState.getBestSector3TimeInMS() == 0 || completedS3 < carState.getBestSector3TimeInMS()) {
-                                    carState.setBestSector3TimeInMS(completedS3);
+                                if (carState.getBestSector3TimeInMS() == 0 || s3 < carState.getBestSector3TimeInMS()) {
+                                    carState.setBestSector3TimeInMS(s3);
                                 }
                             }
                         }
@@ -224,7 +222,10 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     CarStatusData cs = status.getCarStatusData()[i];
                     CarState state = liveSessionState.getCars()[i];
                     state.setFuelInTank(cs.getFuelInTank());
+                    state.setFuelRemainingLaps(cs.getFuelRemainingLaps());
                     state.setErsStoreEnergy(cs.getErsStoreEnergy());
+                    state.setErsDeployMode(cs.getErsDeployMode());
+                    state.setDrsAllowed(cs.getDrsAllowed());
                     state.setVisualTyreCompound(cs.getVisualTyreCompound());
                     state.setTyresAgeLaps(cs.getTyresAgeLaps()); // Phase 10: tyre age per lap
                 }
@@ -244,6 +245,14 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                 liveSessionState.setTrackLength(session.getTrackLength());
                 liveSessionState.setSessionType(session.getSessionType());
                 liveSessionState.setWeather(session.getWeather());
+                liveSessionState.setTrackTemperature(session.getTrackTemperature());
+                liveSessionState.setAirTemperature(session.getAirTemperature());
+                if (session.getNumWeatherForecastSamples() > 0 && session.getWeatherForecastSamples() != null) {
+                    var sample = session.getWeatherForecastSamples()[0];
+                    if (sample != null) {
+                        liveSessionState.setRainPercentage(sample.getRainPercentage());
+                    }
+                }
                 liveSessionState.setTotalLaps(session.getTotalLaps());
                 liveSessionState.setSafetyCarStatus(session.getSafetyCarStatus());
                 liveSessionState.setWeekendLinkIdentifier(session.getWeekendLinkIdentifier());
