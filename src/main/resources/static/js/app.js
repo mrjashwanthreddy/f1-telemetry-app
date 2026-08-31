@@ -818,8 +818,12 @@ function loadPreferences() {
         populateTtsVoices(data.ttsServiceType || 'LOCAL', data.selectedTtsVoice);
 
         // Load balance to header
-        const val = (data.creditBalance !== undefined) ? data.creditBalance.toFixed(2) : '0.00';
-        const acc = (data.accumulatedCharges !== undefined) ? data.accumulatedCharges.toFixed(2) : '0.00';
+        const balNum = parseFloat(data.creditBalance || 0);
+        const hasFracBal = (Math.round(balNum * 100) / 100) !== balNum;
+        const val = hasFracBal ? balNum.toFixed(4) : balNum.toFixed(2);
+
+        const accNum = parseFloat(data.accumulatedCharges || 0);
+        const acc = (accNum > 0 && accNum < 0.01) ? accNum.toFixed(4) : accNum.toFixed(2);
         
         const headerBal = document.getElementById('header-wallet-balance');
         if (headerBal) headerBal.textContent = val;
@@ -1122,8 +1126,12 @@ function loadAiUsageStats() {
     })
     .then(r => r.json())
     .then(data => {
-        const val = (data.creditBalance !== undefined) ? data.creditBalance.toFixed(2) : '0.00';
-        const acc = (data.accumulatedCharges !== undefined) ? data.accumulatedCharges.toFixed(2) : '0.00';
+        const balNum = parseFloat(data.creditBalance || 0);
+        const hasFracBal = (Math.round(balNum * 100) / 100) !== balNum;
+        const val = hasFracBal ? balNum.toFixed(4) : balNum.toFixed(2);
+
+        const accNum = parseFloat(data.accumulatedCharges || 0);
+        const acc = (accNum > 0 && accNum < 0.01) ? accNum.toFixed(4) : accNum.toFixed(2);
         
         const headerBal = document.getElementById('header-wallet-balance');
         if (headerBal) headerBal.textContent = val;

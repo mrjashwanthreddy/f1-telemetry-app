@@ -293,16 +293,42 @@ async function showSessionDebrief(sessionId) {
         const data = await response.json();
         renderDebriefCard(data, content);
 
-        // Speak a summary
-        const firstLines = data.debrief.split('\n').slice(0, 3).join(' ');
-        engineerSpeak(`Session debrief for ${data.track}. ${firstLines}`);
+        if (typeof loadAiUsageStats === 'function') {
+            loadAiUsageStats();
+        }
+
+        // Speak the full debrief analysis naturally
+        speakDebrief(data.track, data.debrief);
 
     } catch (e) {
         content.innerHTML = `<div class="debrief-error">⚠️ Could not reach AI service.</div>`;
     }
 }
 
+function cleanDebriefForSpeech(text) {
+    if (!text) return '';
+    return text
+        .replace(/\*\*/g, '')           // Strip markdown bold asterisks
+        .replace(/#/g, '')              // Strip header symbols
+        .replace(/`{1,3}.*?`{1,3}/gs, '') // Strip code blocks
+        .replace(/\n\s*\n/g, '. ')       // Convert paragraph breaks to pause periods
+        .replace(/\n/g, ' ')            // Convert single linebreaks to spaces
+        .replace(/\s+/g, ' ')           // Collapse multiple spaces
+        .trim();
+}
+
+function speakDebrief(track, debriefText) {
+    const cleanText = cleanDebriefForSpeech(debriefText);
+    if (!cleanText) return;
+    const speechText = `Session debrief for ${track || 'circuit'}. ${cleanText}`;
+    engineerSpeak(speechText);
+}
+
 function renderDebriefCard(data, container) {
+    // Save raw debrief text for speech
+    window.currentDebriefText = data.debrief;
+    window.currentDebriefTrack = data.track;
+
     // Format the markdown-style debrief text into HTML
     const formattedDebrief = data.debrief
         .replace(/\n\n/g, '</p><p>')
@@ -337,7 +363,7 @@ function renderDebriefCard(data, container) {
                     <span class="debrief-session-badge">${data.sessionType}</span>
                     <span class="debrief-lap-count">${data.lapCount} laps</span>
                 </div>
-                <button class="debrief-speak-btn" onclick="engineerSpeak(document.getElementById('debrief-text').innerText)">
+                <button class="debrief-speak-btn" onclick="speakDebrief(window.currentDebriefTrack, window.currentDebriefText)">
                     🔊 Read Aloud
                 </button>
             </div>
@@ -447,6 +473,9 @@ async function sendChatMessage() {
         if (response.ok) {
             const data = await response.json();
             appendChatMessage('engineer', data.answer);
+            if (typeof loadAiUsageStats === 'function') {
+                loadAiUsageStats();
+            }
             engineerSpeak(data.answer);
         } else {
             appendChatMessage('engineer', '⚠️ Could not reach AI. Check your API key configuration.');

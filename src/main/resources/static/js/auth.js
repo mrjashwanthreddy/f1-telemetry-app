@@ -1,19 +1,41 @@
 let isLoginMode = true;
+let selectedRole = 'DRIVER'; // 'DRIVER' or 'ENGINEER'
 
 // Check if user is already logged in on page load
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('jwtToken');
+    const role = localStorage.getItem('userRole');
     if (token) {
-        // Assume token is valid for now, show dashboard
+        if (role === 'ROLE_ENGINEER') {
+            window.location.href = '/engineer.html';
+            return;
+        }
         showDashboard();
     }
 });
 
+function selectAuthRole(role) {
+    selectedRole = role;
+    const btns = document.querySelectorAll('.role-option-btn');
+    btns.forEach(btn => {
+        const btnRole = btn.getAttribute('data-role');
+        if (btnRole === role) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
 function toggleAuthMode() {
     isLoginMode = !isLoginMode;
     document.getElementById('auth-submit-btn').textContent = isLoginMode ? 'LOGIN' : 'SIGN UP';
-    document.getElementById('auth-switch-text').textContent = isLoginMode ? 'New engineer?' : 'Already have an account?';
+    document.getElementById('auth-switch-text').textContent = isLoginMode ? 'New user?' : 'Already have an account?';
     document.getElementById('auth-switch-link').textContent = isLoginMode ? 'Sign up here' : 'Log in here';
+    const roleContainer = document.getElementById('auth-role-selector');
+    if (roleContainer) {
+        roleContainer.style.display = isLoginMode ? 'none' : 'flex';
+    }
     hideError();
 }
 
@@ -28,7 +50,7 @@ async function handleAuth(event) {
     }
 
     const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
-    const payload = { username, password, role: 'ENGINEER' };
+    const payload = { username, password, role: selectedRole };
 
     try {
         const response = await fetch(endpoint, {
@@ -49,22 +71,58 @@ async function handleAuth(event) {
             const data = await response.json();
             if (data.token) {
                 localStorage.setItem('jwtToken', data.token);
+                localStorage.setItem('userRole', data.role || 'ROLE_DRIVER');
+                localStorage.setItem('username', data.username || username);
+                if (data.teamPin) {
+                    localStorage.setItem('teamPin', data.teamPin);
+                }
 
                 // Notify the desktop .exe relay agent so it can authenticate
                 // its UDP relay requests to the OCI server.
-                // Silently ignored if running in a plain browser (no .exe).
                 fetch('http://127.0.0.1:17777/token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
                     body: data.token
                 }).catch(() => { /* running in browser-only mode — expected */ });
 
-                showDashboard();
+                if (data.role === 'ROLE_ENGINEER') {
+                    window.location.href = '/engineer.html';
+                } else {
+                    showDashboard();
+                }
             } else {
                 showError("No token received from server.");
             }
         } else {
-            // Registration successful! Clear fields and switch to login mode.
+            // Registration successful! Automatically log in immediately:
+            try {
+                const loginRes = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (loginRes.ok) {
+                    const data = await loginRes.json();
+                    if (data.token) {
+                        localStorage.setItem('jwtToken', data.token);
+                        localStorage.setItem('userRole', data.role || (selectedRole === 'ENGINEER' ? 'ROLE_ENGINEER' : 'ROLE_DRIVER'));
+                        localStorage.setItem('username', data.username || username);
+                        if (data.teamPin) {
+                            localStorage.setItem('teamPin', data.teamPin);
+                        }
+                        if (data.role === 'ROLE_ENGINEER' || selectedRole === 'ENGINEER') {
+                            window.location.href = '/engineer.html';
+                        } else {
+                            showDashboard();
+                        }
+                        return;
+                    }
+                }
+            } catch (loginErr) {
+                console.warn("Auto-login error", loginErr);
+            }
+
+            // Fallback: switch to login mode with success banner
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             toggleAuthMode();
@@ -82,6 +140,12 @@ async function handleAuth(event) {
 async function showDashboard() {
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
+
+    const pin = localStorage.getItem('teamPin');
+    const pinBadge = document.getElementById('driver-pin-badge');
+    if (pinBadge && pin) {
+        pinBadge.textContent = pin;
+    }
 
     // We should trigger a connect if not already connected
     if (typeof connect === 'function') {
@@ -102,10 +166,23 @@ async function showDashboard() {
             console.error("Failed to start telemetry session", e);
         }
     }
+
+    // Immediately load preferences and AI usage stats so wallet balance is populated
+    if (typeof loadPreferences === 'function') {
+        loadPreferences();
+    }
+    if (typeof loadAiUsageStats === 'function') {
+        loadAiUsageStats();
+    }
 }
 
 function logout() {
     localStorage.removeItem('jwtToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    localStorage.removeItem('teamPin');
+    localStorage.removeItem('pairedDriverName');
+    localStorage.removeItem('pairedDriverId');
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
 
