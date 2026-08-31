@@ -37,6 +37,11 @@ public class DbMigrationHelper implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS lap_distance REAL DEFAULT 0");
             jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS steer REAL DEFAULT 0");
             jdbcTemplate.execute("ALTER TABLE telemetry_records ADD COLUMN IF NOT EXISTS g_force_lateral REAL DEFAULT 0");
+            // Ensure users table role and pairing columns exist
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'ROLE_DRIVER'");
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS team_pin VARCHAR(20)");
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_driver_id BIGINT");
+            jdbcTemplate.execute("UPDATE users SET role = 'ROLE_DRIVER' WHERE role IS NULL");
 
             log.info("[DbMigration] Database schema validation completed successfully.");
         } catch (Exception e) {

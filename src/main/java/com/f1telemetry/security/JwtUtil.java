@@ -25,12 +25,21 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
+        return generateToken(username, "ROLE_DRIVER");
+    }
+
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role != null ? role : "ROLE_DRIVER")
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     public String extractUsername(String token) {

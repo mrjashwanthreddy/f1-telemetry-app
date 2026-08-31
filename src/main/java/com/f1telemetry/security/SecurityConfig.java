@@ -25,7 +25,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/public/**", "/api/relay/**").permitAll()
-                .requestMatchers("/", "/index.html", "/analytics.html", "/css/**", "/js/**", "/telemetry-websocket/**", "/api/analytics/**").permitAll()
+                .requestMatchers("/", "/index.html", "/engineer.html", "/analytics.html", "/css/**", "/js/**", "/telemetry-websocket/**", "/api/analytics/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
