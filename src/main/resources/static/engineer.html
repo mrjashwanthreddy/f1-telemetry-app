@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Engineer - Pit Wall Live Command Center</title>
+    <!-- Modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/timing-tower.css">
+    <link rel="stylesheet" href="/css/engineer-dashboard.css">
+
+    <!-- SockJS and STOMP -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body class="engineer-body">
+
+    <!-- Top Command Header -->
+    <header class="engineer-header">
+        <div class="engineer-brand">
+            <!-- Official Authentic F1 SVG Logo -->
+            <svg style="height: 22px; width: auto;" viewBox="0 0 130 32" fill="#e10600">
+                <path d="M0 32h14.5l24.3-24.3c4.5-4.5 9.8-5.7 17.2-5.7h24.5l8-8H56c-10.2 0-18.4 2.8-24.7 9.1L0 32z"/>
+                <path d="M0 17.5h35.8l8-8H0v8z"/>
+                <path d="M102 0L70 32h18L120 0h-18z"/>
+            </svg>
+            <h1>Race Engineer</h1>
+            <span class="engineer-badge">PIT WALL</span>
+        </div>
+
+        <!-- Live Track & Session Ribbon -->
+        <div class="session-ribbon">
+            <div class="ribbon-item">
+                <span class="ribbon-label">CIRCUIT</span>
+                <span id="ribbon-track" class="ribbon-value">Grand Prix</span>
+            </div>
+            <div class="ribbon-item">
+                <span class="ribbon-label">CONDITIONS</span>
+                <span id="ribbon-weather" class="ribbon-value">DRY</span>
+            </div>
+            <div class="ribbon-item">
+                <span class="ribbon-label">GRID</span>
+                <span id="ribbon-active-cars" class="ribbon-value">22 / 22</span>
+            </div>
+            <div class="ribbon-item">
+                <span class="ribbon-label">STATUS</span>
+                <span id="ribbon-sc" class="tower-safety-car-pill track-clear">GREEN FLAG</span>
+            </div>
+        </div>
+
+        <!-- Linked Driver & Connection -->
+        <div class="driver-select-container">
+            <div id="driver-pill-btn" class="driver-pill" onclick="openPairingModal()" title="Click to Link / Switch Driver Telemetry">
+                <div class="driver-avatar">🏎️</div>
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:0.62rem; color:#6b21a8; font-weight:800; letter-spacing:0.5px;">MONITORED DRIVER</span>
+                    <span id="paired-driver-name" class="driver-name">MY DRIVER</span>
+                </div>
+                <div class="live-indicator"></div>
+                <span style="font-size:0.7rem; color:#7c3aed; margin-left:4px;">▼</span>
+            </div>
+
+            <span id="connection-badge" class="tower-safety-car-pill" style="font-size: 0.72rem; padding: 4px 10px;">CONNECTING...</span>
+
+            <button onclick="logoutEngineer()" style="background:transparent; border:none; color:#f87171; font-weight:700; cursor:pointer; font-size:0.8rem; margin-left:10px; padding: 4px 8px; border-radius:4px; transition: background 0.2s ease;">LOGOUT</button>
+        </div>
+    </header>
+
+    <!-- Pit Wall Workspace Layout -->
+    <main class="pitwall-workspace">
+
+        <!-- LEFT COLUMN: Authentic F1 Broadcast Timing Tower -->
+        <aside class="pitwall-left-col">
+            <div class="timing-tower-container">
+                <!-- Tower Header -->
+                <div class="timing-tower-header">
+                    <div class="f1-logo-badge">
+                        <svg viewBox="0 0 130 32" fill="#e10600" style="height: 18px; width: auto;">
+                            <path d="M0 32h14.5l24.3-24.3c4.5-4.5 9.8-5.7 17.2-5.7h24.5l8-8H56c-10.2 0-18.4 2.8-24.7 9.1L0 32z"/>
+                            <path d="M0 17.5h35.8l8-8H0v8z"/>
+                            <path d="M102 0L70 32h18L120 0h-18z"/>
+                        </svg>
+                    </div>
+                    <div class="tower-lap-counter">
+                        <span>LAP</span>
+                        <span id="tower-lap-current" class="lap-current">1</span>
+                        <span id="tower-lap-total" class="lap-total">/ —</span>
+                    </div>
+                </div>
+
+                <!-- Mode Switcher -->
+                <div class="tower-mode-switch">
+                    <span>LEADERBOARD</span>
+                    <div>
+                        <button id="btn-mode-interval" class="tower-mode-btn active" onclick="toggleTimingMode('interval')">INTERVAL</button>
+                        <button id="btn-mode-gap" class="tower-mode-btn" onclick="toggleTimingMode('gap')">GAP</button>
+                    </div>
+                </div>
+
+                <!-- Driver Rows (22 Cars) -->
+                <div id="timing-tower-rows" class="timing-tower-rows">
+                    <!-- Populated dynamically via engineer-dashboard.js -->
+                    <div style="padding: 20px; text-align: center; color: #64748b; font-size: 0.85rem;">INITIALIZING GRID...</div>
+                </div>
+
+                <!-- Tower Footer Status -->
+                <div class="timing-tower-footer">
+                    <span>TIMING 30Hz</span>
+                    <span style="color: #4ade80;">LIVE GPS</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER & RIGHT: Deep Diagnostic Telemetry Suites -->
+        <section class="pitwall-main-grid">
+
+            <!-- Top Driver Quick Status Strip -->
+            <div class="pit-driver-strip">
+                <div class="driver-strip-info">
+                    <div id="driver-strip-pos" class="driver-pos-box">P1</div>
+                    <div>
+                        <div id="driver-strip-name" class="driver-title-name">LEWIS HAMILTON</div>
+                        <div id="driver-strip-team" class="driver-team-tag">MERCEDES-AMG PETRONAS F1 TEAM</div>
+                    </div>
+                </div>
+
+                <div class="strip-quick-stats">
+                    <div class="quick-stat-box">
+                        <span class="quick-stat-label">LAST LAP</span>
+                        <span id="driver-strip-lastlap" class="quick-stat-val">—:——.———</span>
+                    </div>
+                    <div class="quick-stat-box">
+                        <span class="quick-stat-label">PERSONAL BEST</span>
+                        <span id="driver-strip-bestlap" class="quick-stat-val" style="color: #4ade80;">—:——.———</span>
+                    </div>
+                    <div class="quick-stat-box">
+                        <span class="quick-stat-label">TYRE STRATEGY</span>
+                        <span id="driver-strip-tyre" class="quick-stat-val" style="color: #facc15;">MEDIUM (0 Laps)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 1: Authentic F1 Halo Cockpit HUD & Drivetrain -->
+            <div class="pit-panel hud-cockpit-panel">
+                <div class="pit-panel-title">
+                    <span>⚡ F1 COCKPIT HUD &amp; DRIVETRAIN</span>
+                    <span style="font-size:0.75rem; color:#64748b;">LIVE 60Hz</span>
+                </div>
+
+                <!-- Progressive LED Rev Lights -->
+                <div id="rev-led-bar" class="rev-led-bar"></div>
+
+                <!-- Halo Cockpit HUD Cluster -->
+                <div class="f1-halo-hud-container">
+                    
+                    <!-- Left: Recharge & Brake Arcs -->
+                    <div class="halo-hud-left">
+                        <div class="arc-meter-column recharge-col">
+                            <div class="arc-meter-label">RECHARGE</div>
+                            <div class="arc-segments-stack" id="hud-recharge-segments">
+                                <div class="arc-seg recharge"></div>
+                                <div class="arc-seg recharge"></div>
+                                <div class="arc-seg recharge"></div>
+                                <div class="arc-seg recharge"></div>
+                                <div class="arc-seg recharge"></div>
+                            </div>
+                        </div>
+                        <div class="arc-meter-column brake-col">
+                            <div class="arc-segments-stack" id="hud-brake-segments">
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                                <div class="arc-seg brake"></div>
+                            </div>
+                            <div class="arc-meter-label bottom-label">BRAKE <span id="telemetry-brk-val" class="hud-pct">0%</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Speed, Boost, Overtake & ERS Dial -->
+                    <div class="halo-hud-center-dial">
+                        <div class="dial-inner-card">
+                            <div class="dial-speed-kmh-label">KM/H</div>
+                            <div id="telemetry-speed" class="dial-speed-kmh-val">0</div>
+                            
+                            <div class="dial-boost-row">
+                                <span class="boost-label">BOOST</span>
+                                <div class="boost-bar-track">
+                                    <div id="hud-boost-fill" class="boost-bar-fill"></div>
+                                </div>
+                            </div>
+
+                            <div id="hud-overtake-badge" class="dial-overtake-badge">OVERTAKE</div>
+
+                            <div class="dial-speed-mph-row">
+                                <span id="telemetry-speed-mph" class="dial-speed-mph-val">0</span>
+                                <span class="dial-speed-mph-label">MPH</span>
+                            </div>
+
+                            <div class="dial-ers-mini-pill">
+                                <span class="dial-ers-icon">⚡</span>
+                                <div class="dial-ers-bar-track">
+                                    <div id="hud-ers-mini-fill" class="dial-ers-bar-fill"></div>
+                                </div>
+                                <span id="hud-ers-mini-pct">100%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Deploy & Throttle Arcs -->
+                    <div class="halo-hud-right">
+                        <div class="arc-meter-column deploy-col">
+                            <div class="arc-meter-label">DEPLOY</div>
+                            <div class="arc-segments-stack" id="hud-deploy-segments">
+                                <div class="arc-seg deploy"></div>
+                                <div class="arc-seg deploy"></div>
+                                <div class="arc-seg deploy"></div>
+                                <div class="arc-seg deploy"></div>
+                                <div class="arc-seg deploy"></div>
+                            </div>
+                        </div>
+                        <div class="arc-meter-column throttle-col">
+                            <div class="arc-segments-stack" id="hud-throttle-segments">
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                                <div class="arc-seg throttle"></div>
+                            </div>
+                            <div class="arc-meter-label bottom-label">THROTTLE <span id="telemetry-thr-val" class="hud-pct">0%</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Far Right: Halo Wing Tachometer & Gears Sequence -->
+                    <div class="halo-hud-wing">
+                        <!-- Gears Horizontal Sequence -->
+                        <div class="gears-sequence-bar" id="hud-gears-bar">
+                            <span class="gear-slot" data-gear="-1" id="gear-slot-neg1">R</span>
+                            <span class="gear-slot active" data-gear="0" id="gear-slot-0">N</span>
+                            <span class="gear-slot" data-gear="1" id="gear-slot-1">1</span>
+                            <span class="gear-slot" data-gear="2" id="gear-slot-2">2</span>
+                            <span class="gear-slot" data-gear="3" id="gear-slot-3">3</span>
+                            <span class="gear-slot" data-gear="4" id="gear-slot-4">4</span>
+                            <span class="gear-slot" data-gear="5" id="gear-slot-5">5</span>
+                            <span class="gear-slot" data-gear="6" id="gear-slot-6">6</span>
+                            <span class="gear-slot" data-gear="7" id="gear-slot-7">7</span>
+                            <span class="gear-slot" data-gear="8" id="gear-slot-8">8</span>
+                        </div>
+
+                        <!-- Dynamic RPM Tachometer Curved Sweep -->
+                        <div class="rpm-tach-sweep-container">
+                            <div class="rpm-tach-curve-bg">
+                                <div id="rpm-tach-curve-fill" class="rpm-tach-curve-fill"></div>
+                            </div>
+                            <div class="rpm-tach-ticks">
+                                <span>0</span>
+                                <span>2</span>
+                                <span>4</span>
+                                <span>6</span>
+                                <span>8</span>
+                                <span>10</span>
+                                <span>12</span>
+                                <span>15</span>
+                            </div>
+                            <div class="rpm-tach-label">
+                                <span>RPM x1000</span>
+                                <span id="telemetry-rpm" class="rpm-digit-val">0 RPM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Panel 2: Quad Tyre Thermals & Wear Suite -->
+            <div class="pit-panel">
+                <div class="pit-panel-title">
+                    <span>🌡️ TYRE THERMALS &amp; WEAR MATRIX</span>
+                    <span style="font-size:0.75rem; color:#64748b;">DEGRADATION</span>
+                </div>
+
+                <div class="tyres-thermal-grid">
+                    <!-- Front Left -->
+                    <div class="tyre-corner-box">
+                        <div class="corner-header">
+                            <span>FRONT LEFT (FL)</span>
+                            <span id="temp-fl" class="temp-item-val">0°C</span>
+                        </div>
+                        <div class="corner-temps">
+                            <div class="temp-item">
+                                <span class="temp-item-label">BRAKE DISC</span>
+                                <span id="brake-fl" class="brake-temp-val">0°C</span>
+                            </div>
+                        </div>
+                        <div class="wear-meter-container">
+                            <div class="wear-meter-bar"><div id="wear-fill-fl" class="wear-meter-fill"></div></div>
+                            <span id="wear-txt-fl" class="wear-percent-txt">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Front Right -->
+                    <div class="tyre-corner-box">
+                        <div class="corner-header">
+                            <span>FRONT RIGHT (FR)</span>
+                            <span id="temp-fr" class="temp-item-val">0°C</span>
+                        </div>
+                        <div class="corner-temps">
+                            <div class="temp-item">
+                                <span class="temp-item-label">BRAKE DISC</span>
+                                <span id="brake-fr" class="brake-temp-val">0°C</span>
+                            </div>
+                        </div>
+                        <div class="wear-meter-container">
+                            <div class="wear-meter-bar"><div id="wear-fill-fr" class="wear-meter-fill"></div></div>
+                            <span id="wear-txt-fr" class="wear-percent-txt">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Rear Left -->
+                    <div class="tyre-corner-box">
+                        <div class="corner-header">
+                            <span>REAR LEFT (RL)</span>
+                            <span id="temp-rl" class="temp-item-val">0°C</span>
+                        </div>
+                        <div class="corner-temps">
+                            <div class="temp-item">
+                                <span class="temp-item-label">BRAKE DISC</span>
+                                <span id="brake-rl" class="brake-temp-val">0°C</span>
+                            </div>
+                        </div>
+                        <div class="wear-meter-container">
+                            <div class="wear-meter-bar"><div id="wear-fill-rl" class="wear-meter-fill"></div></div>
+                            <span id="wear-txt-rl" class="wear-percent-txt">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Rear Right -->
+                    <div class="tyre-corner-box">
+                        <div class="corner-header">
+                            <span>REAR RIGHT (RR)</span>
+                            <span id="temp-rr" class="temp-item-val">0°C</span>
+                        </div>
+                        <div class="corner-temps">
+                            <div class="temp-item">
+                                <span class="temp-item-label">BRAKE DISC</span>
+                                <span id="brake-rr" class="brake-temp-val">0°C</span>
+                            </div>
+                        </div>
+                        <div class="wear-meter-container">
+                            <div class="wear-meter-bar"><div id="wear-fill-rr" class="wear-meter-fill"></div></div>
+                            <span id="wear-txt-rr" class="wear-percent-txt">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Aerodynamics & Structural Damage -->
+            <div class="pit-panel">
+                <div class="pit-panel-title">
+                    <span>🛡️ AERO &amp; STRUCTURAL INTEGRITY</span>
+                    <span style="font-size:0.75rem; color:#64748b;">AERO HEALTH</span>
+                </div>
+
+                <div class="damage-hud-container">
+                    <div class="damage-row">
+                        <span class="damage-label">FRONT WING L</span>
+                        <div class="damage-bar-bg"><div id="dmg-fl-wing-fill" class="damage-fill"></div></div>
+                        <span id="dmg-fl-wing-val" class="damage-val">0%</span>
+                    </div>
+                    <div class="damage-row">
+                        <span class="damage-label">FRONT WING R</span>
+                        <div class="damage-bar-bg"><div id="dmg-fr-wing-fill" class="damage-fill"></div></div>
+                        <span id="dmg-fr-wing-val" class="damage-val">0%</span>
+                    </div>
+                    <div class="damage-row">
+                        <span class="damage-label">REAR WING</span>
+                        <div class="damage-bar-bg"><div id="dmg-rear-wing-fill" class="damage-fill"></div></div>
+                        <span id="dmg-rear-wing-val" class="damage-val">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Energy Management, Fuel & Weather Strategy -->
+            <div class="pit-panel">
+                <div class="pit-panel-title">
+                    <span>🔋 ENERGY, FUEL &amp; WEATHER</span>
+                    <span style="font-size:0.75rem; color:#64748b;">LIVE CONDITIONS</span>
+                </div>
+
+                <!-- Top: Compact ERS & Fuel Strategy Cards -->
+                <div class="energy-strategy-grid-compact">
+                    <div class="strategy-gauge-box-compact">
+                        <div class="strategy-gauge-header">⚡ ERS BATTERY</div>
+                        <div class="strategy-compact-row">
+                            <span id="ers-meter-val" class="strategy-gauge-val" style="color: #7c3aed;">0%</span>
+                            <span id="ers-mode-badge" class="ers-mode-tag mode-none">NONE</span>
+                        </div>
+                        <div class="ers-bar-wrap"><div id="ers-meter-fill" class="ers-bar-fill"></div></div>
+                    </div>
+
+                    <div class="strategy-gauge-box-compact">
+                        <div class="strategy-gauge-header">⛽ FUEL IN TANK</div>
+                        <div class="strategy-compact-row">
+                            <span id="fuel-tank-val" class="strategy-gauge-val" style="color: #f97316;">0.0 kg</span>
+                            <span id="fuel-delta-badge" class="fuel-delta-tag positive">+0.0 LAPS</span>
+                        </div>
+                        <div style="font-size:0.72rem; color:#6b21a8; font-weight:800;" id="fuel-est-laps">EST. REMAINING: — LAPS</div>
+                    </div>
+                </div>
+
+                <!-- Horizontal Divider Line -->
+                <div class="panel-inner-divider"></div>
+
+                <!-- Bottom: Live Weather & Track Environment Suite -->
+                <div class="weather-strategy-container">
+                    <div class="weather-top-strip">
+                        <div class="weather-condition-box">
+                            <span id="weather-icon" class="weather-condition-icon">☀️</span>
+                            <div>
+                                <div id="weather-condition-txt" class="weather-condition-title">CLEAR / DRY</div>
+                                <div class="weather-sub-txt">TRACK STATUS: OPTIMAL</div>
+                            </div>
+                        </div>
+                        <div class="weather-metrics-row">
+                            <div class="weather-metric-item">
+                                <span class="metric-label">TRACK TEMP</span>
+                                <span id="weather-track-temp" class="metric-value">38°C</span>
+                            </div>
+                            <div class="weather-metric-item">
+                                <span class="metric-label">AIR TEMP</span>
+                                <span id="weather-air-temp" class="metric-value">26°C</span>
+                            </div>
+                            <div class="weather-metric-item">
+                                <span class="metric-label">RAIN RISK</span>
+                                <span id="weather-rain-pct" class="metric-value" style="color: #2563eb;">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mini Weather Timeline (Now -> +5m -> +10m -> +15m) -->
+                    <div class="weather-forecast-timeline">
+                        <div class="forecast-pill active">
+                            <span class="forecast-time">NOW</span>
+                            <span id="forecast-icon-0" class="forecast-icon">☀️</span>
+                            <span id="forecast-temp-0" class="forecast-desc">38°C</span>
+                        </div>
+                        <div class="forecast-pill">
+                            <span class="forecast-time">+5m</span>
+                            <span id="forecast-icon-1" class="forecast-icon">☀️</span>
+                            <span id="forecast-temp-1" class="forecast-desc">0% RAIN</span>
+                        </div>
+                        <div class="forecast-pill">
+                            <span class="forecast-time">+10m</span>
+                            <span id="forecast-icon-2" class="forecast-icon">⛅</span>
+                            <span id="forecast-temp-2" class="forecast-desc">5% RAIN</span>
+                        </div>
+                        <div class="forecast-pill">
+                            <span class="forecast-time">+15m</span>
+                            <span id="forecast-icon-3" class="forecast-icon">☁️</span>
+                            <span id="forecast-temp-3" class="forecast-desc">10% RAIN</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 5: Sector Splits & Micro-Sector Table (Spans 2 columns) -->
+            <div class="pit-panel" style="grid-column: 1 / -1;">
+                <div class="pit-panel-title">
+                    <span>⏱️ SECTOR SPLITS &amp; MICRO-SPLITS</span>
+                    <span style="font-size:0.75rem; color:#c084fc;">PURPLE = SESSION BEST</span>
+                </div>
+
+                <table class="sector-splits-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">LAP METRIC</th>
+                            <th style="text-align:center;">SECTOR 1</th>
+                            <th style="text-align:center;">SECTOR 2</th>
+                            <th style="text-align:center;">SECTOR 3</th>
+                            <th style="text-align:right;">TOTAL LAP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="color:#38bdf8; font-weight:800;">CURRENT RUNNING</td>
+                            <td id="split-s1-live" style="text-align:center;">—</td>
+                            <td id="split-s2-live" style="text-align:center;">—</td>
+                            <td id="split-s3-live" style="text-align:center;">—</td>
+                            <td style="text-align:right; color:#38bdf8; font-weight:800;">IN PROGRESS</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#94a3b8;">LAST COMPLETED</td>
+                            <td id="split-s1-last" style="text-align:center;">—</td>
+                            <td id="split-s2-last" style="text-align:center;">—</td>
+                            <td id="split-s3-last" style="text-align:center;">—</td>
+                            <td style="text-align:right;">—</td>
+                        </tr>
+                        <tr>
+                            <td style="color:#4ade80; font-weight:800;">DRIVER PERSONAL BEST</td>
+                            <td id="split-s1-best" style="text-align:center; color:#4ade80;">—</td>
+                            <td id="split-s2-best" style="text-align:center; color:#4ade80;">—</td>
+                            <td id="split-s3-best" style="text-align:center; color:#4ade80;">—</td>
+                            <td style="text-align:right; color:#4ade80; font-weight:800;">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Driver Pairing Modal -->
+    <div id="pairing-modal" class="pairing-modal-overlay" style="display:none;">
+        <div class="pairing-modal-card">
+            <div class="modal-header">
+                <h2>LINK DRIVER TELEMETRY</h2>
+                <button class="modal-close-btn" onclick="closePairingModal()">✕</button>
+            </div>
+
+            <div style="font-size:0.85rem; color:#94a3b8;">
+                Enter your driver's 6-character Team PIN, or select an active online sim racer from the roster below:
+            </div>
+
+            <div class="pin-input-group">
+                <input type="text" id="input-team-pin" placeholder="Enter PIN (e.g. F1-8492)" maxlength="8">
+                <button onclick="pairWithDriverPin()">CONNECT</button>
+            </div>
+
+            <div style="font-size:0.75rem; font-weight:800; color:#64748b; margin-top:8px; letter-spacing:1px;">ACTIVE DRIVERS ROSTER</div>
+            <div id="driver-roster-list" class="driver-roster-list">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/engineer-dashboard.js"></script>
+</body>
+</html>

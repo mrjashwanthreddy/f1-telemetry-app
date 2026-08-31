@@ -1,0 +1,1313 @@
+/* ==========================================================================
+   F1 RACE ENGINEER PIT WALL - WHITE & VIOLET GLASSMORPHISM THEME
+   ========================================================================== */
+
+:root {
+    --pit-bg: #faf5ff;
+    --pit-panel-bg: rgba(255, 255, 255, 0.78);
+    --pit-panel-border: rgba(139, 92, 246, 0.18);
+    --pit-panel-border-glow: rgba(168, 85, 247, 0.35);
+    
+    --pit-accent-violet: #7c3aed;
+    --pit-accent-purple: #9333ea;
+    --pit-accent-indigo: #6366f1;
+    --pit-accent-blue: #2563eb;
+    --pit-accent-red: #ef4444;
+    --pit-accent-green: #10b981;
+    --pit-accent-yellow: #f59e0b;
+
+    --pit-text-bright: #1e1b4b;
+    --pit-text-dim: #6b21a8;
+    --pit-text-subtle: #9333ea;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body.engineer-body {
+    background-color: #f8fafc;
+    background-image: 
+        radial-gradient(at 10% 15%, rgba(139, 92, 246, 0.14) 0px, transparent 50%),
+        radial-gradient(at 90% 85%, rgba(217, 70, 239, 0.12) 0px, transparent 50%),
+        radial-gradient(circle at 50% 50%, #ffffff 0%, #faf5ff 100%);
+    color: var(--pit-text-bright);
+    font-family: 'Outfit', 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header & Top Command Bar */
+.engineer-header {
+    height: 62px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.05);
+}
+
+.engineer-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.engineer-brand h1 {
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #3b0764 0%, #7c3aed 50%, #9333ea 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+}
+
+.engineer-badge {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.18) 0%, rgba(147, 51, 234, 0.08) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    color: #7c3aed;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+/* Live Session Ribbon Bar */
+.session-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(243, 232, 255, 0.5);
+    padding: 4px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.ribbon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ribbon-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #6b21a8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.ribbon-value {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #1e1b4b;
+}
+
+/* Driver Selector & Pair Status */
+.driver-select-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.driver-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(243, 232, 255, 0.8);
+    border: 1.5px solid rgba(124, 58, 237, 0.35);
+    padding: 5px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.driver-pill:hover {
+    background: #ffffff;
+    border-color: #7c3aed;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.2);
+}
+
+.driver-pill .driver-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.driver-pill .driver-name {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    letter-spacing: 0.5px;
+}
+
+.driver-pill .live-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: live-pulse 1.2s infinite;
+}
+
+@keyframes live-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.btn-pair-driver {
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    border: none;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn-pair-driver:hover {
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+    filter: brightness(1.08);
+}
+
+/* Main Pit Wall Workspace Layout */
+.pitwall-workspace {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    padding: 16px 24px;
+    height: calc(100vh - 62px);
+    overflow: hidden;
+}
+
+/* Left Column: Timing Tower Container */
+.pitwall-left-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+/* Center & Right Telemetry Grid */
+.pitwall-main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 14px;
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.pitwall-main-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.pitwall-main-grid::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.2);
+    border-radius: 3px;
+}
+
+/* Top Driver Quick Strip */
+.pit-driver-strip {
+    grid-column: 1 / -1;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 8px 30px rgba(124, 58, 237, 0.08);
+}
+
+.driver-strip-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.driver-pos-box {
+    background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 4px 14px;
+    border-radius: 8px;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.driver-title-name {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    letter-spacing: 0.5px;
+}
+
+.driver-team-tag {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #6b21a8;
+    margin-top: 1px;
+}
+
+.strip-quick-stats {
+    display: flex;
+    gap: 24px;
+}
+
+.quick-stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.quick-stat-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #6b21a8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.quick-stat-val {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Glass Panels */
+.pit-panel {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.07);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.pit-panel:hover {
+    box-shadow: 0 14px 40px rgba(124, 58, 237, 0.12);
+}
+
+.pit-panel-title {
+    font-size: 0.88rem;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #4c1d95;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+    padding-bottom: 6px;
+}
+
+/* ==========================================================================
+   AUTHENTIC F1 HALO COCKPIT HUD & DRIVETRAIN CLUSTER
+   ========================================================================== */
+
+.hud-aero-pill {
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #6b21a8;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.hud-aero-pill.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #059669;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.drs-symbol {
+    font-weight: 900;
+    font-size: 0.85rem;
+}
+
+.f1-halo-hud-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    flex: 1;
+    padding: 4px 0;
+}
+
+/* Left & Right Arc Meters */
+.halo-hud-left,
+.halo-hud-right {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.arc-meter-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.arc-meter-label {
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #6b21a8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.arc-meter-label.bottom-label {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hud-pct {
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+}
+
+.arc-segments-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 3px;
+    background: rgba(243, 232, 255, 0.6);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.arc-seg {
+    width: 26px;
+    height: 7px;
+    border-radius: 2px;
+    background: rgba(139, 92, 246, 0.12);
+    transition: background 0.05s ease, box-shadow 0.05s ease;
+}
+
+/* Brake Segments */
+.arc-seg.brake.active {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+/* Recharge Segments */
+.arc-seg.recharge.active {
+    background: #2563eb;
+    box-shadow: 0 0 8px #2563eb;
+}
+
+/* Throttle Segments */
+.arc-seg.throttle.active {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+/* Deploy Segments */
+.arc-seg.deploy.active {
+    background: #06b6d4;
+    box-shadow: 0 0 8px #06b6d4;
+}
+
+/* Center Speed & Boost Dial */
+.halo-hud-center-dial {
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.98) 0%, rgba(243, 232, 255, 0.85) 100%);
+    border: 3px solid #7c3aed;
+    border-radius: 50%;
+    width: 208px;
+    height: 208px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 28px rgba(124, 58, 237, 0.22), inset 0 0 16px rgba(124, 58, 237, 0.08);
+    flex-shrink: 0;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.dial-inner-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    padding: 14px 12px;
+    box-sizing: border-box;
+}
+
+.dial-speed-kmh-label {
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: #7c3aed;
+    letter-spacing: 2px;
+    margin: 0;
+    line-height: 1;
+}
+
+.dial-speed-kmh-val {
+    font-size: 2.7rem;
+    font-weight: 900;
+    line-height: 0.95;
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    margin: 0;
+}
+
+.dial-boost-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.boost-label {
+    font-size: 0.62rem;
+    font-weight: 900;
+    color: #6b21a8;
+    letter-spacing: 0.5px;
+}
+
+.boost-bar-track {
+    width: 48px;
+    height: 5px;
+    background: rgba(139, 92, 246, 0.18);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.boost-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+    transition: width 0.08s linear;
+}
+
+.dial-overtake-badge {
+    padding: 2px 12px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1.5px solid rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    transition: all 0.15s ease;
+    margin: 0;
+    user-select: none;
+}
+
+.dial-overtake-badge.active {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.95), 0 0 28px rgba(16, 185, 129, 0.55) !important;
+    animation: overtake-glow 0.4s ease-in-out infinite alternate !important;
+}
+
+@keyframes overtake-glow {
+    from {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.5);
+        transform: scale(1);
+    }
+    to {
+        box-shadow: 0 0 22px rgba(16, 185, 129, 1), 0 0 35px rgba(16, 185, 129, 0.7), inset 0 0 10px rgba(255, 255, 255, 0.8);
+        transform: scale(1.05);
+    }
+}
+
+.dial-speed-mph-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 0;
+}
+
+.dial-speed-mph-val {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+}
+
+.dial-speed-mph-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #6b21a8;
+}
+
+.dial-ers-mini-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.64rem;
+    font-weight: 800;
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.1);
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin: 0;
+}
+
+.dial-ers-bar-track {
+    width: 30px;
+    height: 5px;
+    background: rgba(139, 92, 246, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dial-ers-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: #7c3aed;
+    transition: width 0.2s ease;
+}
+
+/* Far Right Halo Wing: Tachometer & Gears Sequence */
+.halo-hud-wing {
+    flex: 1;
+    background: rgba(243, 232, 255, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 14px;
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.wing-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wing-active-aero {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aero-title {
+    font-size: 0.68rem;
+    font-weight: 900;
+    color: #6b21a8;
+    letter-spacing: 1px;
+}
+
+.aero-icon {
+    font-weight: 900;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    transition: color 0.15s ease;
+}
+
+.aero-icon.active {
+    color: #10b981 !important;
+    text-shadow: 0 0 8px #10b981;
+}
+
+/* Gears Sequence */
+.gears-sequence-bar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.gear-slot {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    transition: all 0.12s ease;
+}
+
+.gear-slot.active {
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%) !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+    transform: scale(1.08);
+}
+
+/* RPM Tachometer Curved Sweep */
+.rpm-tach-sweep-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rpm-tach-curve-bg {
+    height: 7px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.rpm-tach-curve-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #10b981 0%, #f59e0b 60%, #ef4444 85%, #7c3aed 100%);
+    box-shadow: 0 0 8px rgba(124, 58, 237, 0.4);
+    transition: width 0.04s linear;
+}
+
+.rpm-tach-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #6b21a8;
+}
+
+.rpm-tach-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #6b21a8;
+}
+
+.rpm-digit-val {
+    font-weight: 900;
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+}
+    gap: 10px;
+}
+
+.pedal-label {
+    width: 32px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #581c87;
+}
+
+.pedal-bar-bg {
+    flex: 1;
+    height: 14px;
+    background: rgba(243, 232, 255, 0.6);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    position: relative;
+}
+
+.pedal-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.04s linear;
+}
+
+.pedal-fill.throttle {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.pedal-fill.brake {
+    background: linear-gradient(90deg, #ef4444 0%, #f43f5e 100%);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+.pedal-val {
+    width: 40px;
+    text-align: right;
+    font-size: 0.85rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #1e1b4b;
+}
+
+/* Quad Tyre Thermals Suite */
+.tyres-thermal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    flex: 1;
+}
+
+.tyre-corner-box {
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.corner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #581c87;
+}
+
+.corner-temps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.temp-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.temp-item-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #6b21a8;
+    text-transform: uppercase;
+}
+
+.temp-item-val {
+    font-size: 1.1rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.brake-temp-val {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f97316;
+}
+
+.wear-meter-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.wear-meter-bar {
+    flex: 1;
+    height: 7px;
+    background: rgba(243, 232, 255, 0.7);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+.wear-meter-fill {
+    height: 100%;
+    width: 0%;
+    background: #10b981;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.wear-percent-txt {
+    font-size: 0.75rem;
+    font-weight: 900;
+    min-width: 32px;
+    text-align: right;
+    color: #1e1b4b;
+}
+
+/* Aerodynamics & Damage */
+.damage-hud-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+}
+
+.damage-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.damage-label {
+    width: 90px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #581c87;
+}
+
+.damage-bar-bg {
+    flex: 1;
+    height: 9px;
+    background: rgba(243, 232, 255, 0.7);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+.damage-fill {
+    height: 100%;
+    width: 0%;
+    background: #10b981;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.damage-val {
+    font-size: 0.85rem;
+    font-weight: 900;
+    min-width: 34px;
+    text-align: right;
+    color: #1e1b4b;
+}
+
+/* Energy & Fuel Strategy (Compact) */
+.energy-strategy-grid-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.strategy-gauge-box-compact {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(139, 92, 246, 0.16);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.strategy-compact-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.ers-mode-tag {
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+}
+
+.ers-mode-tag.mode-none {
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+    border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.ers-mode-tag.mode-medium {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.12);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.ers-mode-tag.mode-hotlap {
+    color: #d97706;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.ers-mode-tag.mode-overtake {
+    color: #ffffff;
+    background: #10b981;
+    border: 1px solid #10b981;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.85);
+    animation: overtake-glow 0.4s ease-in-out infinite alternate;
+}
+
+/* Dividing Line */
+.panel-inner-divider {
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 30%, rgba(139, 92, 246, 0.3) 70%, transparent 100%);
+    margin: 8px 0;
+}
+
+/* Weather & Track Environment Suite */
+.weather-strategy-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.weather-top-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(243, 232, 255, 0.5);
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.weather-condition-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.weather-condition-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.weather-condition-title {
+    font-size: 0.92rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    letter-spacing: 0.5px;
+}
+
+.weather-sub-txt {
+    font-size: 0.64rem;
+    font-weight: 800;
+    color: #059669;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.weather-metrics-row {
+    display: flex;
+    gap: 12px;
+}
+
+.weather-metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.metric-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #6b21a8;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Weather Timeline */
+.weather-forecast-timeline {
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+.forecast-pill {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    border-radius: 8px;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    transition: all 0.15s ease;
+}
+
+.forecast-pill.active {
+    background: rgba(243, 232, 255, 0.9);
+    border-color: #7c3aed;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+}
+
+.forecast-time {
+    font-size: 0.6rem;
+    font-weight: 900;
+    color: #6b21a8;
+    letter-spacing: 0.5px;
+}
+
+.forecast-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.forecast-desc {
+    font-size: 0.64rem;
+    font-weight: 800;
+    color: #1e1b4b;
+    white-space: nowrap;
+}
+
+.strategy-gauge-header {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #6b21a8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.strategy-gauge-val {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    margin: 2px 0;
+}
+
+.ers-bar-wrap {
+    height: 6px;
+    background: rgba(243, 232, 255, 0.7);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+.ers-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7c3aed 0%, #6366f1 100%);
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.35);
+    transition: width 0.1s linear;
+}
+
+.fuel-delta-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.fuel-delta-tag.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.fuel-delta-tag.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Sector Splits Table */
+.sector-splits-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.sector-splits-table th {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #6b21a8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 10px;
+    border-bottom: 1.5px solid rgba(139, 92, 246, 0.18);
+}
+
+.sector-splits-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.06);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Driver Pairing Modal */
+.pairing-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(243, 232, 255, 0.7);
+    backdrop-filter: blur(20px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.pairing-modal-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(32px);
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    width: 440px;
+    padding: 28px;
+    box-shadow: 0 25px 60px rgba(109, 40, 217, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+    padding-bottom: 10px;
+}
+
+.modal-header h2 {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #4c1d95;
+    letter-spacing: 1px;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #6b21a8;
+    font-size: 1.2rem;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.driver-roster-list {
+    max-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.roster-item {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.roster-item:hover {
+    background: #ffffff;
+    border-color: #7c3aed;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+}
+
+.pin-input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pin-input-group input {
+    flex: 1 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1.5px solid rgba(139, 92, 246, 0.25);
+    color: #1e1b4b;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    padding: 0 14px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pin-input-group input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.pin-input-group button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    height: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    color: #ffffff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 900;
+    padding: 0 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
+.pin-input-group button:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.pin-input-group button:active {
+    transform: translateY(0);
+}
