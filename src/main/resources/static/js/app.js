@@ -661,7 +661,7 @@ function updateSectorFastestLists(activeCars) {
         
         const top3 = getTop3ForSector(activeCars, sec);
         if (top3.length === 0) {
-            listEl.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 10px;">No times</div>`;
+            listEl.innerHTML = `<div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 4px 0;">No times</div>`;
             continue;
         }
         
@@ -671,11 +671,14 @@ function updateSectorFastestLists(activeCars) {
             const abbr = getDriverAbbreviation(item.name, item.carIndex);
             
             const row = document.createElement('div');
-            row.className = 'sector-best-row';
+            row.className = `sector-best-row ${index === 0 ? 'p1-sector' : ''}`;
             row.innerHTML = `
-                <span class="sector-best-rank">${index + 1}</span>
-                <span class="sector-best-driver" style="color: ${teamInfo.color};">${abbr}</span>
-                <span class="sector-best-time">${formatSectorTime(item.time)}</span>
+                <span class="sector-best-rank ${index === 0 ? 'p1-rank' : ''}">${index + 1}</span>
+                <span class="sector-best-driver">
+                    <span style="display:inline-block; width:4px; height:12px; border-radius:2px; background:${teamInfo.color}; margin-right:6px; vertical-align:middle; flex-shrink:0;"></span>
+                    <span style="color: ${teamInfo.color}; font-weight: 800;">${abbr}</span>
+                </span>
+                <span class="sector-best-time ${index === 0 ? 'p1-time' : ''}">${formatSectorTime(item.time)}</span>
             `;
             listEl.appendChild(row);
         });
@@ -717,8 +720,12 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         
         const marker = document.createElement('div');
         marker.className = 'car-marker';
+        const teamInfo = getTeamInfo(car.teamId);
         if (car.carIndex === playerIdx) {
             marker.classList.add('player');
+        } else if (teamInfo && teamInfo.color) {
+            marker.style.backgroundColor = teamInfo.color;
+            marker.style.color = teamInfo.text || '#ffffff';
         }
         marker.style.left = `${pct}%`;
         marker.textContent = car.position;

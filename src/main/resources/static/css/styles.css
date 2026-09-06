@@ -447,29 +447,617 @@ h2 {
     transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* Standings & Leaderboard Table */
-.standings-table-wrapper {
-    background: rgba(255, 255, 255, 0.75) !important;
-    border: 1px solid rgba(139, 92, 246, 0.15) !important;
-    border-radius: 12px;
+/* ==========================================================================
+   TOAST NOTIFICATIONS (FIXED POSITION TOP-RIGHT)
+   ========================================================================== */
+
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    pointer-events: none;
 }
 
-.standings-table-wrapper table th {
-    background: rgba(243, 232, 255, 0.8) !important;
+.toast {
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1.5px solid rgba(139, 92, 246, 0.22);
+    border-left: 4px solid #7c3aed;
+    padding: 12px 18px;
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(124, 58, 237, 0.15), 0 4px 12px rgba(0, 0, 0, 0.04);
+    color: #1e1b4b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.2s ease;
+}
+
+.toast:hover {
+    box-shadow: 0 16px 44px rgba(124, 58, 237, 0.22);
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+.toast .toast-type {
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 900;
+    color: #6b21a8;
+}
+
+.toast .toast-msg {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e1b4b;
+    line-height: 1.35;
+}
+
+.toast .toast-detail {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #7c3aed;
+    font-family: 'Outfit', monospace;
+}
+
+/* Severity variants */
+.toast.warning {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(254, 243, 199, 0.7));
+}
+
+.toast.critical, .toast.error {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(254, 226, 226, 0.7));
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseToastRed 1.5s ease-in-out infinite alternate;
+}
+
+.toast.success {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(220, 252, 231, 0.7));
+}
+
+.toast.info {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 242, 255, 0.7));
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(110%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 120px;
+    }
+    to {
+        transform: translateX(110%);
+        opacity: 0;
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+@keyframes pulseToastRed {
+    from { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2); }
+    to { box-shadow: 0 8px 30px rgba(239, 68, 68, 0.45); }
+}
+
+/* ==========================================================================
+   FASTEST LAP CINEMATIC BANNER
+   ========================================================================== */
+
+.fastest-lap-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10000;
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.96) 0%, rgba(88, 28, 135, 0.96) 50%, rgba(30, 27, 75, 0.96) 100%);
+    border-bottom: 3px solid #ffd700;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 14px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    animation: bannerSlideDown 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    box-shadow: 0 8px 36px rgba(124, 58, 237, 0.35);
+}
+
+.fastest-lap-banner.hiding {
+    animation: bannerSlideUp 0.35s ease-in forwards;
+}
+
+.fastest-lap-icon {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.5));
+}
+
+.fastest-lap-label {
+    font-size: 0.85rem;
+    letter-spacing: 4px;
+    color: #fef08a;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.fastest-lap-time {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 2px;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+@keyframes bannerSlideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bannerSlideUp {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-100%); opacity: 0; }
+}
+
+/* ==========================================================================
+   LIVE TRACK PROGRESS TIMELINE & CAR MARKERS
+   ========================================================================== */
+
+.track-timeline-container {
+    position: relative;
+    margin-bottom: 12px;
+    padding: 10px 0;
+}
+
+.track-timeline-bg {
+    position: relative;
+    height: 16px !important;
+    background: linear-gradient(90deg, #1e1b4b 0%, #312e81 33%, #4338ca 66%, #1e1b4b 100%) !important;
+    border-radius: 8px !important;
+    border: 1.5px solid rgba(139, 92, 246, 0.25) !important;
+    overflow: visible !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(124, 58, 237, 0.08);
+}
+
+.timeline-sector-line {
+    position: absolute;
+    top: 0;
+    width: 2px !important;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+#timeline-markers-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.car-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #64748b;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 900;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    z-index: 100;
+    transition: left 0.15s ease-out;
+    cursor: default;
+    user-select: none;
+}
+
+.car-marker.player {
+    background: #e10600 !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
+    font-weight: 900;
+    box-shadow: 0 0 14px rgba(225, 6, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+    z-index: 250;
+}
+
+.car-marker.player::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 50%;
+    border: 2px solid #e10600;
+    animation: markerPulse 1.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.car-marker.safety-car {
+    background: #fbbf24;
+    color: #000000;
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    z-index: 150;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ==========================================================================
+   TIMING TOWER STANDINGS & LEADERBOARD TABLE
+   ========================================================================== */
+
+.standings-left-panel {
+    background: var(--glass-card-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: var(--panel-shadow);
+}
+
+.standings-table-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1.5px solid rgba(139, 92, 246, 0.18) !important;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 3px rgba(124, 58, 237, 0.04);
+}
+
+.standings-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.95rem;
+    table-layout: fixed;
+}
+
+.standings-table-wrapper th {
+    padding: 9px 10px;
+    background: rgba(243, 232, 255, 0.88) !important;
     color: #581c87 !important;
     font-weight: 800;
-    font-size: 0.82rem;
-    letter-spacing: 1px;
-    border-bottom: 1.5px solid rgba(139, 92, 246, 0.2) !important;
+    font-size: 0.78rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border-bottom: 2px solid rgba(139, 92, 246, 0.22) !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-.standings-table-wrapper table tr:hover td {
-    background: rgba(243, 232, 255, 0.4) !important;
+.standings-table-wrapper td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.08);
+    font-size: 0.92rem;
+    vertical-align: middle;
+}
+
+.standings-table-wrapper tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.standings-table-wrapper tbody tr:hover {
+    background-color: rgba(243, 232, 255, 0.5) !important;
 }
 
 .standings-table-wrapper tr.player-row {
-    background: rgba(124, 58, 237, 0.1) !important;
+    background: rgba(124, 58, 237, 0.12) !important;
     font-weight: 800;
+    border-left: 3px solid #7c3aed;
+}
+
+/* Driver Team Badge styling */
+.driver-badge-container {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 6px;
+    overflow: hidden;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.driver-badge-pos {
+    background: rgba(255, 255, 255, 0.9);
+    color: #1e1b4b;
+    padding: 2px 6px;
+    min-width: 24px;
+    text-align: center;
+    font-weight: 900;
+    font-size: 0.8rem;
+}
+
+.driver-badge-abbr {
+    color: #ffffff;
+    padding: 2px 7px;
+    text-transform: uppercase;
+    font-weight: 900;
+    font-size: 0.82rem;
+}
+
+/* Sector Highlights (Authentic F1 Broadcast) */
+.sector-purple {
+    color: #7c3aed !important;
+    background: rgba(124, 58, 237, 0.12) !important;
+    border: 1px solid rgba(124, 58, 237, 0.3) !important;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-weight: 800;
+    display: inline-block;
+}
+
+.sector-green {
+    color: #16a34a !important;
+    background: rgba(22, 163, 74, 0.12) !important;
+    border: 1px solid rgba(22, 163, 74, 0.3) !important;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-weight: 800;
+    display: inline-block;
+}
+
+.sector-yellow {
+    color: #d97706 !important;
+    background: rgba(217, 119, 6, 0.12) !important;
+    border: 1px solid rgba(217, 119, 6, 0.25) !important;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-weight: 800;
+    display: inline-block;
+}
+
+.sector-normal {
+    font-weight: 600;
+    color: var(--text-main);
+    display: inline-block;
+}
+
+/* ==========================================================================
+   FASTEST SECTORS (TOP 3) PANEL
+   ========================================================================== */
+
+.fastest-sectors-panel {
+    background: var(--glass-card-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: var(--panel-shadow);
+}
+
+.sector-tables-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.sector-best-col {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(139, 92, 246, 0.16) !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.04);
+    transition: all 0.2s ease;
+}
+
+.sector-best-col:hover {
+    border-color: rgba(139, 92, 246, 0.32) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.sector-best-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(243, 232, 255, 0.45);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.sector-best-row:hover {
+    transform: translateX(3px);
+    background: rgba(243, 232, 255, 0.8);
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+.sector-best-row.p1-sector {
+    background: linear-gradient(135deg, rgba(243, 232, 255, 0.9), rgba(237, 233, 254, 0.8));
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+.sector-best-rank {
+    font-weight: 900;
+    color: #7c3aed;
+    margin-right: 8px;
+    font-size: 0.85rem;
+    width: 14px;
+}
+
+.sector-best-rank.p1-rank {
+    color: #6b21a8;
+}
+
+.sector-best-driver {
+    font-weight: 800;
+    flex: 1;
+    font-size: 0.92rem;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+
+.sector-best-time {
+    font-weight: 800;
+    font-family: 'Outfit', monospace;
+    font-size: 0.92rem;
+    color: #1e1b4b;
+    letter-spacing: 0.5px;
+}
+
+.sector-best-time.p1-time {
+    color: #7c3aed;
+    font-weight: 900;
+}
+
+/* ==========================================================================
+   INTEGRATED SESSION EVENT LOG
+   ========================================================================== */
+
+.integrated-event-log {
+    background: var(--glass-card-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: var(--panel-shadow);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.event-log-header {
+    padding: 10px 16px !important;
+    background: rgba(243, 232, 255, 0.65) !important;
+    border-bottom: 1.5px solid rgba(139, 92, 246, 0.16) !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 1.2px !important;
+    color: #581c87 !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.event-log-entries {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 0;
+}
+
+.event-log-entry {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 9px 14px !important;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.08) !important;
+    font-size: 0.88rem !important;
+    animation: logEntryIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: background-color 0.15s ease;
+}
+
+.event-log-entry:hover {
+    background: rgba(243, 232, 255, 0.45);
+}
+
+.event-log-entry:last-child {
+    border-bottom: none !important;
+}
+
+.event-log-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.event-log-dot.success {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.event-log-dot.critical, .event-log-dot.error {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.event-log-dot.warning {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.event-log-dot.info {
+    background: #3b82f6;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+}
+
+.event-log-text {
+    flex: 1 !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    color: #1e1b4b !important;
+    word-break: break-word;
+}
+
+.event-log-time {
+    font-size: 0.78rem !important;
+    color: #7c3aed !important;
+    font-weight: 800 !important;
+    font-variant-numeric: tabular-nums !important;
+    flex-shrink: 0 !important;
+    margin-top: 1px;
+    background: rgba(124, 58, 237, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+@keyframes logEntryIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ==========================================================================

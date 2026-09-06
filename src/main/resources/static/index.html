@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Telemetry Live Dashboard</title>
     <!-- Modern font -->
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/ai-panel.css">
 
@@ -254,20 +254,20 @@
                     </div>
 
                     <!-- Horizontal Track Progress Map -->
-                    <div class="track-timeline-container" style="position:relative; margin-bottom:10px; padding: 8px 0;">
-                        <div class="track-timeline-bg" style="position:relative; height:12px; background:linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); border-radius:6px; border:1px solid rgba(255,255,255,0.05); overflow:visible;">
-                            <div class="timeline-sector-line" style="position:absolute; left:33%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
-                            <div class="timeline-sector-line" style="position:absolute; left:66%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.25);"></div>
-                            <div id="timeline-markers-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible;"></div>
+                    <div class="track-timeline-container">
+                        <div class="track-timeline-bg">
+                            <div class="timeline-sector-line" style="left:33.3%;"></div>
+                            <div class="timeline-sector-line" style="left:66.6%;"></div>
+                            <div id="timeline-markers-container"></div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-dim); margin-top:4px;">
-                            <span>START/FINISH</span><span>SECTOR 1</span><span>SECTOR 2</span><span>SECTOR 3</span>
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:800; color:var(--text-dim); margin-top:6px; letter-spacing:0.5px;">
+                            <span>START / FINISH</span><span>SECTOR 1</span><span>SECTOR 2</span><span>SECTOR 3</span>
                         </div>
                     </div>
 
                     <!-- Leaderboard Table -->
-                    <div class="standings-table-wrapper" style="flex:1; min-height:0; overflow-y:auto; border:1px solid var(--panel-border); border-radius:8px; background:#f8fafc;">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:1.05rem; table-layout:fixed;">
+                    <div class="standings-table-wrapper">
+                        <table>
                             <colgroup>
                                 <col style="width:6%">
                                 <col style="width:18%">
@@ -281,17 +281,17 @@
                                 <col style="width:9.4%">
                             </colgroup>
                             <thead>
-                                <tr style="position:sticky; top:0; background:#f1f5f9; border-bottom:2px solid var(--panel-border); z-index:10; font-weight:800; color:var(--text-dim);">
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">POS</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">DRIVER</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">LAST LAP</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">BEST LAP</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">TYRE</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">AGE</th>
-                                    <th id="th-timing-mode" style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; user-select:none;" onclick="toggleLeaderboardTimingMode()" title="Click to switch between Interval (to car ahead) and Gap (to P1 leader)">INTERVAL <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:400;">⇄</span></th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S1</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S2</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S3</th>
+                                <tr>
+                                    <th>POS</th>
+                                    <th>DRIVER</th>
+                                    <th>LAST LAP</th>
+                                    <th>BEST LAP</th>
+                                    <th>TYRE</th>
+                                    <th>AGE</th>
+                                    <th id="th-timing-mode" onclick="toggleLeaderboardTimingMode()" title="Click to switch between Interval (to car ahead) and Gap (to P1 leader)" style="cursor:pointer; user-select:none;">INTERVAL <span style="font-size:0.75rem; color:var(--accent-violet); font-weight:400;">⇄</span></th>
+                                    <th>S1</th>
+                                    <th>S2</th>
+                                    <th>S3</th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboard-rows">
@@ -306,35 +306,35 @@
             <div class="unified-right-col">
 
                 <!-- Fastest Sectors -->
-                <section class="panel fastest-sectors-panel" style="flex: none; display: flex; flex-direction: column; padding: 12px 14px;">
+                <section class="panel fastest-sectors-panel" style="flex: none; padding: 12px 14px;">
                     <h2>FASTEST SECTORS (TOP 3)</h2>
-                    <div class="sector-tables-grid" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
-                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 1</div>
+                    <div class="sector-tables-grid">
+                        <div class="sector-best-col">
+                            <div style="font-size: 0.82rem; font-weight: 900; color: #7c3aed; text-transform: uppercase; border-left: 3px solid #7c3aed; padding-left: 8px; margin-bottom: 8px;">Sector 1</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;" id="s1-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 4px 0;">No times</div>
                             </div>
                         </div>
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
-                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 2</div>
+                        <div class="sector-best-col">
+                            <div style="font-size: 0.82rem; font-weight: 900; color: #7c3aed; text-transform: uppercase; border-left: 3px solid #7c3aed; padding-left: 8px; margin-bottom: 8px;">Sector 2</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;" id="s2-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 4px 0;">No times</div>
                             </div>
                         </div>
-                        <div class="sector-best-col" style="display: flex; flex-direction: column; min-height: 0; background: #fafafb; border: 1px solid rgba(0,0,0,0.03); border-radius: 8px; padding: 10px;">
-                            <div style="font-size: 0.82rem; font-weight: 800; color: var(--accent-purple); text-transform: uppercase; border-left: 3px solid var(--accent-purple); padding-left: 8px; margin-bottom: 8px;">Sector 3</div>
+                        <div class="sector-best-col">
+                            <div style="font-size: 0.82rem; font-weight: 900; color: #7c3aed; text-transform: uppercase; border-left: 3px solid #7c3aed; padding-left: 8px; margin-bottom: 8px;">Sector 3</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;" id="s3-fastest-list">
-                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;">No times</div>
+                                <div style="text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 4px 0;">No times</div>
                             </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- Session Events -->
-                <section class="integrated-event-log panel" style="flex: 1; display:flex; flex-direction:column; min-height:0; overflow:hidden; padding: 0;">
-                    <div class="event-log-header" style="background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.06); padding:8px 12px; font-size:0.8rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; flex-shrink:0;">⚡ Session Events</div>
-                    <div id="event-log-entries" class="event-log-entries" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; min-height:0;">
-                        <div class="event-log-entry" style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(0,0,0,0.04);">
+                <section class="panel integrated-event-log" style="flex: 1; min-height: 0; padding: 0;">
+                    <div class="event-log-header">⚡ Session Events</div>
+                    <div id="event-log-entries" class="event-log-entries">
+                        <div class="event-log-entry" data-placeholder="true">
                             <div class="event-log-dot info"></div>
                             <div class="event-log-text" style="color: var(--text-dim); font-size:0.85rem;">Waiting for events…</div>
                         </div>
