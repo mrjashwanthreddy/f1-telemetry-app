@@ -1,4 +1,4 @@
-let isLoginMode = true;
+let authMode = 'LOGIN'; // 'LOGIN', 'REGISTER', 'RESET'
 let selectedRole = 'DRIVER'; // 'DRIVER' or 'ENGINEER'
 
 // Check if user is already logged in on page load
@@ -27,21 +27,67 @@ function selectAuthRole(role) {
     });
 }
 
-function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    document.getElementById('auth-submit-btn').textContent = isLoginMode ? 'LOGIN' : 'SIGN UP';
-    document.getElementById('auth-switch-text').textContent = isLoginMode ? 'New user?' : 'Already have an account?';
-    document.getElementById('auth-switch-link').textContent = isLoginMode ? 'Sign up here' : 'Log in here';
-    const roleContainer = document.getElementById('auth-role-selector');
-    if (roleContainer) {
-        roleContainer.style.display = isLoginMode ? 'none' : 'flex';
-    }
+function setAuthMode(mode) {
+    authMode = mode;
     hideError();
+
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const switchText = document.getElementById('auth-switch-text');
+    const switchLink = document.getElementById('auth-switch-link');
+    const forgotP = document.getElementById('auth-forgot-p');
+    const roleContainer = document.getElementById('auth-role-selector');
+    const labelPass = document.getElementById('label-password');
+    const confirmPassGroup = document.getElementById('group-confirm-password');
+
+    if (authMode === 'LOGIN') {
+        if (submitBtn) submitBtn.textContent = 'LOGIN';
+        if (switchText) switchText.textContent = 'New user?';
+        if (switchLink) {
+            switchLink.textContent = 'Sign up here';
+            switchLink.onclick = (e) => { e.preventDefault(); setAuthMode('REGISTER'); };
+        }
+        if (forgotP) forgotP.style.display = 'block';
+        if (roleContainer) roleContainer.style.display = 'none';
+        if (labelPass) labelPass.textContent = 'Password';
+        if (confirmPassGroup) confirmPassGroup.style.display = 'none';
+    } else if (authMode === 'REGISTER') {
+        if (submitBtn) submitBtn.textContent = 'SIGN UP';
+        if (switchText) switchText.textContent = 'Already have an account?';
+        if (switchLink) {
+            switchLink.textContent = 'Log in here';
+            switchLink.onclick = (e) => { e.preventDefault(); setAuthMode('LOGIN'); };
+        }
+        if (forgotP) forgotP.style.display = 'none';
+        if (roleContainer) roleContainer.style.display = 'flex';
+        if (labelPass) labelPass.textContent = 'Password';
+        if (confirmPassGroup) confirmPassGroup.style.display = 'none';
+    } else if (authMode === 'RESET') {
+        if (submitBtn) submitBtn.textContent = 'RESET PASSWORD';
+        if (switchText) switchText.textContent = 'Remembered your password?';
+        if (switchLink) {
+            switchLink.textContent = 'Log in here';
+            switchLink.onclick = (e) => { e.preventDefault(); setAuthMode('LOGIN'); };
+        }
+        if (forgotP) forgotP.style.display = 'none';
+        if (roleContainer) roleContainer.style.display = 'flex';
+        if (labelPass) labelPass.textContent = 'New Password';
+        if (confirmPassGroup) confirmPassGroup.style.display = 'block';
+    }
+}
+
+function toggleAuthMode(event) {
+    if (event) event.preventDefault();
+    setAuthMode(authMode === 'LOGIN' ? 'REGISTER' : 'LOGIN');
+}
+
+function toggleResetMode(event) {
+    if (event) event.preventDefault();
+    setAuthMode('RESET');
 }
 
 async function handleAuth(event) {
     event.preventDefault();
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
 
     if (!username || !password) {
@@ -49,7 +95,48 @@ async function handleAuth(event) {
         return;
     }
 
-    const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+    if (authMode === 'RESET') {
+        const confirmPass = document.getElementById('confirm-password')?.value;
+        if (password !== confirmPass) {
+            showError("Passwords do not match. Please verify.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    newPassword: password,
+                    role: selectedRole
+                })
+            });
+
+            if (res.ok) {
+                const msg = await res.text();
+                setAuthMode('LOGIN');
+                document.getElementById('password').value = '';
+                if (document.getElementById('confirm-password')) document.getElementById('confirm-password').value = '';
+                const errBox = document.getElementById('auth-error');
+                if (errBox) {
+                    errBox.style.display = 'block';
+                    errBox.style.backgroundColor = 'rgba(16, 185, 129, 0.18)';
+                    errBox.style.borderLeftColor = '#10b981';
+                    errBox.style.color = '#065f46';
+                    errBox.textContent = msg || 'Password reset successfully! Please log in with your new password.';
+                }
+            } else {
+                const err = await res.text();
+                showError(err || 'Failed to reset password.');
+            }
+        } catch (e) {
+            showError("Network error resetting password.");
+        }
+        return;
+    }
+
+    const endpoint = (authMode === 'LOGIN') ? '/api/auth/login' : '/api/auth/register';
     const payload = { username, password, role: selectedRole };
 
     try {
@@ -67,7 +154,7 @@ async function handleAuth(event) {
             return;
         }
 
-        if (isLoginMode) {
+        if (authMode === 'LOGIN') {
             const data = await response.json();
             if (data.token) {
                 localStorage.setItem('jwtToken', data.token);
@@ -125,11 +212,15 @@ async function handleAuth(event) {
             // Fallback: switch to login mode with success banner
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
-            toggleAuthMode();
-            document.getElementById('auth-error').style.display = 'block';
-            document.getElementById('auth-error').style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
-            document.getElementById('auth-error').style.borderLeftColor = '#00ff00';
-            document.getElementById('auth-error').textContent = "Registration successful! Please log in.";
+            setAuthMode('LOGIN');
+            const errBox = document.getElementById('auth-error');
+            if (errBox) {
+                errBox.style.display = 'block';
+                errBox.style.backgroundColor = 'rgba(16, 185, 129, 0.18)';
+                errBox.style.borderLeftColor = '#10b981';
+                errBox.style.color = '#065f46';
+                errBox.textContent = "Registration successful! Please log in.";
+            }
         }
     } catch (err) {
         console.error(err);

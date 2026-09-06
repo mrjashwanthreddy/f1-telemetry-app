@@ -1171,6 +1171,58 @@ body.engineer-body {
     font-variant-numeric: tabular-nums;
 }
 
+/* Micro-Sectors & Micro-Splits Bar */
+.micro-splits-container {
+    background: rgba(248, 250, 252, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+.micro-sectors-bar {
+    display: grid;
+    grid-template-columns: repeat(21, 1fr);
+    gap: 4px;
+    height: 22px;
+    margin: 8px 0;
+    padding: 3px;
+    background: rgba(15, 23, 42, 0.08);
+    border-radius: 6px;
+}
+
+.micro-segment {
+    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.35);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+}
+
+.micro-segment.purple {
+    background: #a855f7;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+.micro-segment.green {
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.micro-segment.yellow {
+    background: #eab308;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+.micro-segment.active {
+    background: #38bdf8;
+    box-shadow: 0 0 12px #38bdf8;
+    animation: pulse-micro 0.8s infinite alternate;
+}
+
+@keyframes pulse-micro {
+    0% { transform: scaleY(0.9); filter: brightness(1); }
+    100% { transform: scaleY(1.15); filter: brightness(1.3); }
+}
+
 /* Driver Pairing Modal */
 .pairing-modal-overlay {
     position: fixed;

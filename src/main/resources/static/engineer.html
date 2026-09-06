@@ -54,7 +54,7 @@
                 <div class="driver-avatar">🏎️</div>
                 <div style="display:flex; flex-direction:column;">
                     <span style="font-size:0.62rem; color:#6b21a8; font-weight:800; letter-spacing:0.5px;">MONITORED DRIVER</span>
-                    <span id="paired-driver-name" class="driver-name">MY DRIVER</span>
+                    <span id="paired-driver-name" class="driver-name">LINK DRIVER PIN</span>
                 </div>
                 <div class="live-indicator"></div>
                 <span style="font-size:0.7rem; color:#7c3aed; margin-left:4px;">▼</span>
@@ -506,17 +506,38 @@
                                 <td id="split-s1-last" style="text-align:center;">—</td>
                                 <td id="split-s2-last" style="text-align:center;">—</td>
                                 <td id="split-s3-last" style="text-align:center;">—</td>
-                                <td style="text-align:right;">—</td>
+                                <td id="split-total-last" style="text-align:right; font-weight:800;">—</td>
                             </tr>
                             <tr>
                                 <td style="color:#4ade80; font-weight:800;">DRIVER PERSONAL BEST</td>
                                 <td id="split-s1-best" style="text-align:center; color:#4ade80;">—</td>
                                 <td id="split-s2-best" style="text-align:center; color:#4ade80;">—</td>
                                 <td id="split-s3-best" style="text-align:center; color:#4ade80;">—</td>
-                                <td style="text-align:right; color:#4ade80; font-weight:800;">—</td>
+                                <td id="split-total-best" style="text-align:right; color:#4ade80; font-weight:800;">—</td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Live 21 Micro-Sectors Bar -->
+                <div class="micro-splits-container" style="margin-top: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-wrap:wrap; gap:8px;">
+                        <span style="font-size:0.75rem; font-weight:800; color:#6b21a8; letter-spacing:0.5px;">MICRO-SECTOR SPLITS (21 SEGMENTS)</span>
+                        <div style="display:flex; gap:10px; font-size:0.68rem; font-weight:700;">
+                            <span style="color:#a855f7;">● PURPLE: BEST</span>
+                            <span style="color:#16a34a;">● GREEN: PB</span>
+                            <span style="color:#ca8a04;">● YELLOW: OFF-PACE</span>
+                            <span style="color:#0284c7;">● ACTIVE: RUNNING</span>
+                        </div>
+                    </div>
+                    <div id="micro-sectors-bar" class="micro-sectors-bar">
+                        <!-- 21 Micro-Sector mini-blocks -->
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:0.65rem; color:#64748b; font-weight:800;">
+                        <span>SECTOR 1 (MINI 1-7)</span>
+                        <span>SECTOR 2 (MINI 8-14)</span>
+                        <span>SECTOR 3 (MINI 15-21)</span>
+                    </div>
                 </div>
             </div>
 
@@ -531,18 +552,23 @@
                 <button class="modal-close-btn" onclick="closePairingModal()">✕</button>
             </div>
 
-            <div style="font-size:0.85rem; color:#94a3b8;">
-                Enter your driver's 6-character Team PIN, or select an active online sim racer from the roster below:
+            <div style="font-size:0.85rem; color:#64748b; line-height:1.4;">
+                Enter your Sim Driver's 7-character Team PIN (e.g. F1-8492) to establish a live pit wall telemetry link:
             </div>
 
-            <div class="pin-input-group">
-                <input type="text" id="input-team-pin" placeholder="Enter PIN (e.g. F1-8492)" maxlength="8">
-                <button onclick="pairWithDriverPin()">CONNECT</button>
+            <div class="pin-input-group" style="margin-top: 14px;">
+                <input type="text" id="input-team-pin" placeholder="Enter PIN (e.g. F1-8492)" maxlength="8" style="text-transform:uppercase;">
+                <button id="btn-pair-connect" onclick="pairWithDriverPin()">CONNECT</button>
             </div>
 
-            <div style="font-size:0.75rem; font-weight:800; color:#64748b; margin-top:8px; letter-spacing:1px;">ACTIVE DRIVERS ROSTER</div>
-            <div id="driver-roster-list" class="driver-roster-list">
-                <!-- Populated dynamically via JS -->
+            <div id="pairing-status-msg" style="margin-top: 8px; font-size: 0.82rem; font-weight: 700; text-align: center; min-height: 20px;"></div>
+
+            <div id="paired-driver-info" style="display:none; margin-top: 14px; padding: 12px; background: rgba(243, 232, 255, 0.7); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 10px;">
+                <div style="font-size: 0.75rem; color: #6b21a8; font-weight: 800;">CURRENTLY LINKED DRIVER:</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <span id="modal-linked-name" style="font-weight: 900; font-size: 1.05rem; color: #1e1b4b;">—</span>
+                    <button onclick="unpairDriver()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #dc2626; font-weight: 800; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; cursor: pointer;">DISCONNECT</button>
+                </div>
             </div>
         </div>
     </div>

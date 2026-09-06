@@ -8,6 +8,7 @@ let isWsConnecting = false;
 let lastTelemetryTime = 0;
 let timingMode = 'interval'; // 'interval' or 'gap'
 let monitoredCarIndex = null; // defaults to playerCarIndex
+let userSelectedDriver = false; // true if user manually clicked a driver
 let activeDriverInfo = { name: "HAMILTON", team: "Mercedes", number: 44, teamPin: "" };
 let availableDrivers = [];
 let sessionDataCache = null;
@@ -24,6 +25,52 @@ const F1_TEAMS = {
     7: { name: 'Haas', color: '#B6BABD', text: '#000000', code: 'HAS' },
     8: { name: 'McLaren', color: '#F58020', text: '#ffffff', code: 'MCL' },
     9: { name: 'Sauber', color: '#52E252', text: '#000000', code: 'SAU' }
+};
+
+// Official F1 25 Driver IDs from EA Sports F1 25 UDP Telemetry Spec Appendix (p. 24)
+const OFFICIAL_DRIVER_IDS = {
+    0: { name: 'Carlos Sainz', code: 'SAI' },
+    2: { name: 'Daniel Ricciardo', code: 'RIC' },
+    3: { name: 'Fernando Alonso', code: 'ALO' },
+    4: { name: 'Felipe Massa', code: 'MAS' },
+    7: { name: 'Lewis Hamilton', code: 'HAM' },
+    9: { name: 'Max Verstappen', code: 'VER' },
+    10: { name: 'Nico Hülkenberg', code: 'HUL' },
+    11: { name: 'Kevin Magnussen', code: 'MAG' },
+    14: { name: 'Sergio Pérez', code: 'PER' },
+    15: { name: 'Valtteri Bottas', code: 'BOT' },
+    17: { name: 'Esteban Ocon', code: 'OCO' },
+    19: { name: 'Lance Stroll', code: 'STR' },
+    50: { name: 'George Russell', code: 'RUS' },
+    54: { name: 'Lando Norris', code: 'NOR' },
+    58: { name: 'Charles Leclerc', code: 'LEC' },
+    59: { name: 'Pierre Gasly', code: 'GAS' },
+    62: { name: 'Alexander Albon', code: 'ALB' },
+    80: { name: 'Guanyu Zhou', code: 'ZHO' },
+    94: { name: 'Yuki Tsunoda', code: 'TSU' },
+    112: { name: 'Oscar Piastri', code: 'PIA' },
+    113: { name: 'Liam Lawson', code: 'LAW' },
+    132: { name: 'Logan Sargeant', code: 'SAR' },
+    136: { name: 'Jack Doohan', code: 'DOO' },
+    147: { name: 'Oliver Bearman', code: 'BEA' },
+    149: { name: 'Isack Hadjar', code: 'HAD' },
+    161: { name: 'Gabriel Bortoleto', code: 'BOR' },
+    162: { name: 'Franco Colapinto', code: 'COL' },
+    165: { name: 'Kimi Antonelli', code: 'ANT' }
+};
+
+// Team default driver rosters
+const TEAM_DEFAULT_DRIVERS = {
+    0: [{ name: 'George Russell', code: 'RUS' }, { name: 'Kimi Antonelli', code: 'ANT' }],
+    1: [{ name: 'Charles Leclerc', code: 'LEC' }, { name: 'Lewis Hamilton', code: 'HAM' }],
+    2: [{ name: 'Max Verstappen', code: 'VER' }, { name: 'Yuki Tsunoda', code: 'TSU' }],
+    3: [{ name: 'Alexander Albon', code: 'ALB' }, { name: 'Carlos Sainz', code: 'SAI' }],
+    4: [{ name: 'Fernando Alonso', code: 'ALO' }, { name: 'Lance Stroll', code: 'STR' }],
+    5: [{ name: 'Pierre Gasly', code: 'GAS' }, { name: 'Franco Colapinto', code: 'COL' }],
+    6: [{ name: 'Liam Lawson', code: 'LAW' }, { name: 'Isack Hadjar', code: 'HAD' }],
+    7: [{ name: 'Esteban Ocon', code: 'OCO' }, { name: 'Oliver Bearman', code: 'BEA' }],
+    8: [{ name: 'Lando Norris', code: 'NOR' }, { name: 'Oscar Piastri', code: 'PIA' }],
+    9: [{ name: 'Nico Hülkenberg', code: 'HUL' }, { name: 'Gabriel Bortoleto', code: 'BOR' }]
 };
 
 // Known Driver 3-Letter Code Fallbacks
@@ -186,8 +233,26 @@ function handleTelemetryFrame(data) {
     sessionDataCache = data;
 
     const playerIdx = data.playerCarIndex;
-    if (monitoredCarIndex === null) {
+    if (!userSelectedDriver && playerIdx !== undefined && playerIdx >= 0 && playerIdx < data.cars.length) {
         monitoredCarIndex = playerIdx;
+    } else if (monitoredCarIndex === null) {
+        monitoredCarIndex = (playerIdx !== undefined && playerIdx >= 0) ? playerIdx : 0;
+    }
+
+    // Update monitored driver badge in the top bar
+    const pairedDriverNameEl = document.getElementById('paired-driver-name');
+    if (pairedDriverNameEl) {
+        const linkedName = localStorage.getItem('pairedDriverName');
+        const playerCar = (playerIdx !== undefined && playerIdx >= 0) ? data.cars[playerIdx] : null;
+        if (linkedName) {
+            pairedDriverNameEl.textContent = linkedName.toUpperCase();
+        } else if (monitoredCarIndex === playerIdx && playerCar && playerCar.name) {
+            pairedDriverNameEl.textContent = playerCar.name.toUpperCase();
+        } else if (data.cars[monitoredCarIndex] && data.cars[monitoredCarIndex].name) {
+            pairedDriverNameEl.textContent = data.cars[monitoredCarIndex].name.toUpperCase();
+        } else {
+            pairedDriverNameEl.textContent = "LINK DRIVER PIN";
+        }
     }
 
     // 1. Update Session Top Ribbon
@@ -208,7 +273,10 @@ function updateSessionRibbon(data) {
     const activeCarsEl = document.getElementById('ribbon-active-cars');
 
     if (trackEl) trackEl.textContent = getTrackName(data.trackId);
-    if (weatherEl) weatherEl.textContent = getWeatherName(data.weather);
+    if (weatherEl) {
+        let rainPct = (data.rainPercentage !== undefined && data.rainPercentage !== null) ? data.rainPercentage : 0;
+        weatherEl.textContent = `${getWeatherName(data.weather)}${rainPct > 0 ? ` (${rainPct}% Rain)` : ''}`;
+    }
     if (activeCarsEl) {
         const activeCount = data.cars.filter(c => c.position > 0 && c.position <= 22).length;
         activeCarsEl.textContent = `${activeCount} / 22`;
@@ -217,12 +285,24 @@ function updateSessionRibbon(data) {
     if (scEl) {
         let scText = "GREEN FLAG";
         let scClass = "track-clear";
-        if (data.safetyCarStatus === 1 || data.safetyCarStatus === 2) {
+        if (data.redFlag) {
+            scText = "RED FLAG";
+            scClass = "red-flag";
+        } else if (data.chequeredFlag) {
+            scText = "CHEQUERED FLAG";
+            scClass = "chequered-flag";
+        } else if (data.safetyCarStatus === 1 || data.safetyCarStatus === 2) {
             scText = "VSC";
             scClass = "vsc";
         } else if (data.safetyCarStatus === 3) {
             scText = "FULL SAFETY CAR";
             scClass = "full-sc";
+        } else if (data.safetyCarStatus === 4) {
+            scText = "FORMATION LAP";
+            scClass = "formation-lap";
+        } else if (data.trackFlag === 3) {
+            scText = "YELLOW FLAG";
+            scClass = "yellow-flag";
         }
         scEl.textContent = scText;
         scEl.className = `tower-safety-car-pill ${scClass}`;
@@ -258,33 +338,33 @@ function renderTimingTower(data, currentMonitoredIdx) {
     for (let i = 0; i < activeCars.length; i++) {
         const car = activeCars[i];
         const isMonitored = car.carIndex === currentMonitoredIdx;
+        const isPlayer = (data.playerCarIndex !== undefined && car.carIndex === data.playerCarIndex);
         const isP1 = car.position === 1;
         const team = F1_TEAMS[car.teamId] || { name: 'F1', color: '#64748b', text: '#fff', code: 'F1' };
-        const driverCode = getDriverCode(car.name, car.carIndex);
+        const driverCode = getDriverCode(car, car.carIndex);
         const compound = getCompoundBadge(car.visualTyreCompound);
 
         // Compute Interval / Gap
         let deltaText = '—';
         let deltaClass = '';
         if (isP1) {
-            deltaText = 'INTERVAL';
+            deltaText = timingMode === 'interval' ? 'INTERVAL' : 'LEADER';
             deltaClass = 'leader';
         } else if (timingMode === 'interval') {
-            // Gap to car ahead
-            const prevCar = activeCars[i - 1];
-            if (prevCar && car.lastLapTimeInMS > 0 && prevCar.lastLapTimeInMS > 0) {
-                const diff = (car.lastLapTimeInMS - prevCar.lastLapTimeInMS) / 1000.0;
-                deltaText = diff > 0 ? `+${diff.toFixed(3)}` : `+0.${Math.abs(Math.round(diff * 1000)) % 999}`;
+            // Authentic F1 Game Realtime Interval (gap to car in front)
+            if (car.deltaToCarInFrontInMS > 0) {
+                deltaText = `+${(car.deltaToCarInFrontInMS / 1000.0).toFixed(3)}`;
+            } else if (car.deltaToLeaderInMS > 0) {
+                deltaText = `+${(car.deltaToLeaderInMS / 1000.0).toFixed(3)}`;
             } else {
-                deltaText = `+${(0.200 + (i * 0.15)).toFixed(3)}`;
+                deltaText = '—';
             }
         } else {
             // Gap to Leader
-            if (leader && car.lastLapTimeInMS > 0 && leader.lastLapTimeInMS > 0) {
-                const diff = (car.lastLapTimeInMS - leader.lastLapTimeInMS) / 1000.0;
-                deltaText = diff > 0 ? `+${diff.toFixed(3)}` : `+${(i * 0.75).toFixed(3)}`;
+            if (car.deltaToLeaderInMS > 0) {
+                deltaText = `+${(car.deltaToLeaderInMS / 1000.0).toFixed(3)}`;
             } else {
-                deltaText = `+${(i * 0.75).toFixed(3)}`;
+                deltaText = '—';
             }
         }
 
@@ -292,13 +372,19 @@ function renderTimingTower(data, currentMonitoredIdx) {
         if (car.resultStatus === 4 || car.resultStatus === 5) {
             deltaText = 'OUT';
             deltaClass = 'out';
+        } else if (car.resultStatus === 6) {
+            deltaText = 'IN PIT';
+            deltaClass = 'out';
         }
 
         html += `
             <div class="tower-row ${isP1 ? 'p1-row' : ''} ${isMonitored ? 'monitored-driver' : ''}" onclick="selectMonitoredDriver(${car.carIndex})">
                 <div class="tower-pos">${car.position}</div>
                 <div class="tower-team-pill" style="background: ${team.color};"></div>
-                <div class="tower-driver-code">${driverCode}</div>
+                <div class="tower-driver-code">
+                    ${driverCode}
+                    ${isPlayer ? '<span class="tower-player-badge" style="background:#7c3aed;">DRIVER</span>' : ''}
+                </div>
                 <div class="tower-delta ${deltaClass}">${deltaText}</div>
                 <div class="tower-tyre ${compound.cssClass}">${compound.char}</div>
             </div>
@@ -317,6 +403,7 @@ function toggleTimingMode(mode) {
 }
 
 function selectMonitoredDriver(carIndex) {
+    userSelectedDriver = true;
     monitoredCarIndex = carIndex;
     if (sessionDataCache) {
         renderTimingTower(sessionDataCache, monitoredCarIndex);
@@ -515,14 +602,44 @@ function renderDriverTelemetry(data, carIdx) {
         weatherRainEl.style.color = rainPct > 30 ? '#2563eb' : '#10b981';
     }
 
-    // Forecast timeline sample updates
-    const fIcon0 = document.getElementById('forecast-icon-0');
-    const fTemp0 = document.getElementById('forecast-temp-0');
-    if (fIcon0) fIcon0.textContent = weatherIcons[weatherId] || '☀️';
-    if (fTemp0) fTemp0.textContent = `${trackTemp}°C`;
+    // Dynamic Weather Forecast Timeline
+    renderWeatherForecasts(data, trackTemp, weatherId, weatherIcons);
 
-    // 6. Sector Splits Table
+    // 6. Sector Splits & Micro-splits Table
     updateSectorSplitsTable(car, data);
+}
+
+function renderWeatherForecasts(data, currentTrackTemp, weatherId, weatherIcons) {
+    const timelineEl = document.querySelector('.weather-forecast-timeline');
+    if (!timelineEl) return;
+
+    if (data.weatherForecasts && data.weatherForecasts.length > 0) {
+        let html = '';
+        const samples = data.weatherForecasts.slice(0, 5);
+        samples.forEach((fc, idx) => {
+            const isNow = fc.timeOffset === 0 || idx === 0;
+            const timeLabel = isNow ? 'NOW' : `+${fc.timeOffset}m`;
+            const icon = weatherIcons[fc.weather] || '☀️';
+            const rainVal = fc.rainPercentage !== undefined ? fc.rainPercentage : 0;
+            const rainColor = rainVal > 30 ? '#2563eb' : '#10b981';
+            const desc = isNow ? `${fc.trackTemperature || currentTrackTemp}°C` : `${rainVal}% RAIN`;
+
+            html += `
+                <div class="forecast-pill ${isNow ? 'active' : ''}">
+                    <span class="forecast-time">${timeLabel}</span>
+                    <span class="forecast-icon">${icon}</span>
+                    <span class="forecast-desc" style="color:${isNow ? '#1e1b4b' : rainColor};">${desc}</span>
+                </div>
+            `;
+        });
+        timelineEl.innerHTML = html;
+    } else {
+        // Fallback default forecast slots
+        const fIcon0 = document.getElementById('forecast-icon-0');
+        const fTemp0 = document.getElementById('forecast-temp-0');
+        if (fIcon0) fIcon0.textContent = weatherIcons[weatherId] || '☀️';
+        if (fTemp0) fTemp0.textContent = `${currentTrackTemp}°C`;
+    }
 }
 
 function updateCornerHUD(corner, surfaceTemp, brakeTemp, wearPct) {
@@ -567,18 +684,88 @@ function updateSectorSplitsTable(car, sessionData) {
     const s1Best = document.getElementById('split-s1-best');
     const s2Best = document.getElementById('split-s2-best');
     const s3Best = document.getElementById('split-s3-best');
+    const totalLast = document.getElementById('split-total-last');
+    const totalBest = document.getElementById('split-total-best');
 
+    // Live running lap sectors
+    if (s1El) {
+        if (car.sector1TimeInMS > 0) {
+            s1El.textContent = formatSectorMS(car.sector1TimeInMS);
+            s1El.style.color = (car.bestSector1TimeInMS > 0 && car.sector1TimeInMS <= car.bestSector1TimeInMS) ? '#4ade80' : '#eab308';
+        } else {
+            s1El.textContent = car.sector === 0 ? 'RUNNING' : '—';
+            s1El.style.color = car.sector === 0 ? '#38bdf8' : '#94a3b8';
+        }
+    }
+    if (s2El) {
+        if (car.sector2TimeInMS > 0) {
+            s2El.textContent = formatSectorMS(car.sector2TimeInMS);
+            s2El.style.color = (car.bestSector2TimeInMS > 0 && car.sector2TimeInMS <= car.bestSector2TimeInMS) ? '#4ade80' : '#eab308';
+        } else {
+            s2El.textContent = car.sector === 1 ? 'RUNNING' : '—';
+            s2El.style.color = car.sector === 1 ? '#38bdf8' : '#94a3b8';
+        }
+    }
+    if (s3El) {
+        s3El.textContent = car.sector === 2 ? 'RUNNING' : '—';
+        s3El.style.color = car.sector === 2 ? '#38bdf8' : '#94a3b8';
+    }
+
+    // Last completed lap
     if (s1Last) s1Last.textContent = formatSectorMS(car.lastLapSector1TimeInMS);
     if (s2Last) s2Last.textContent = formatSectorMS(car.lastLapSector2TimeInMS);
     if (s3Last) s3Last.textContent = formatSectorMS(car.lastLapSector3TimeInMS);
+    if (totalLast) totalLast.textContent = formatTimeMS(car.lastLapTimeInMS);
 
+    // Driver personal best
     if (s1Best) s1Best.textContent = formatSectorMS(car.bestSector1TimeInMS);
     if (s2Best) s2Best.textContent = formatSectorMS(car.bestSector2TimeInMS);
     if (s3Best) s3Best.textContent = formatSectorMS(car.bestSector3TimeInMS);
+    if (totalBest) totalBest.textContent = formatTimeMS(car.bestLapTimeInMS);
 
-    if (s1El) s1El.textContent = formatSectorMS(car.sector1TimeInMS);
-    if (s2El) s2El.textContent = formatSectorMS(car.sector2TimeInMS);
-    if (s3El) s3El.textContent = '—';
+    // 21 Micro-Sectors Bar
+    renderMicroSectorsBar(car, sessionData);
+}
+
+function renderMicroSectorsBar(car, sessionData) {
+    const bar = document.getElementById('micro-sectors-bar');
+    if (!bar) return;
+
+    if (bar.children.length !== 21) {
+        bar.innerHTML = '';
+        for (let i = 0; i < 21; i++) {
+            const seg = document.createElement('div');
+            seg.className = 'micro-segment';
+            seg.id = `micro-seg-${i}`;
+            bar.appendChild(seg);
+        }
+    }
+
+    const trackLen = (sessionData && sessionData.trackLength > 0) ? sessionData.trackLength : 5000;
+    const progress = Math.max(0, Math.min(1.0, (car.lapDistance || 0) / trackLen));
+    const activeMicroIdx = Math.min(20, Math.floor(progress * 21));
+
+    for (let i = 0; i < 21; i++) {
+        const seg = document.getElementById(`micro-seg-${i}`);
+        if (!seg) continue;
+
+        if (i === activeMicroIdx) {
+            seg.className = 'micro-segment active';
+        } else if (i < activeMicroIdx) {
+            // Passed micro-segments
+            if (i < 7) {
+                const isPb = car.bestSector1TimeInMS > 0 && car.sector1TimeInMS > 0 && car.sector1TimeInMS <= car.bestSector1TimeInMS;
+                seg.className = isPb ? 'micro-segment purple' : 'micro-segment green';
+            } else if (i < 14) {
+                const isPb = car.bestSector2TimeInMS > 0 && car.sector2TimeInMS > 0 && car.sector2TimeInMS <= car.bestSector2TimeInMS;
+                seg.className = isPb ? 'micro-segment purple' : 'micro-segment green';
+            } else {
+                seg.className = 'micro-segment green';
+            }
+        } else {
+            seg.className = 'micro-segment';
+        }
+    }
 }
 
 // ── Rev LED Lights Bar ────────────────────────────────────────────────────
@@ -615,64 +802,57 @@ function updateRevLeds(rpm) {
     }
 }
 
-// ── Driver Pairing & Roster Modal ─────────────────────────────────────────
-async function fetchDriversList() {
-    try {
-        const token = localStorage.getItem('jwtToken');
-        const res = await fetch('/api/engineer/drivers', {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        if (res.ok) {
-            availableDrivers = await res.json();
-            renderDriverRoster();
-        }
-    } catch (e) {
-        console.warn("Could not fetch drivers roster", e);
-    }
-}
-
+// ── Driver Pairing Modal (Strictly PIN-Based) ─────────────────────────
 function openPairingModal() {
-    document.getElementById('pairing-modal').style.display = 'flex';
-    fetchDriversList();
+    const modal = document.getElementById('pairing-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const statusEl = document.getElementById('pairing-status-msg');
+    if (statusEl) statusEl.textContent = '';
+
+    const linkedDriver = localStorage.getItem('pairedDriverName');
+    const linkedInfoEl = document.getElementById('paired-driver-info');
+    const linkedNameEl = document.getElementById('modal-linked-name');
+
+    if (linkedDriver && linkedInfoEl && linkedNameEl) {
+        linkedNameEl.textContent = linkedDriver.toUpperCase();
+        linkedInfoEl.style.display = 'block';
+    } else if (linkedInfoEl) {
+        linkedInfoEl.style.display = 'none';
+    }
+
+    const pinInput = document.getElementById('input-team-pin');
+    if (pinInput) {
+        pinInput.value = '';
+        setTimeout(() => pinInput.focus(), 100);
+    }
 }
 
 function closePairingModal() {
-    document.getElementById('pairing-modal').style.display = 'none';
-}
-
-function renderDriverRoster() {
-    const listEl = document.getElementById('driver-roster-list');
-    if (!listEl) return;
-
-    if (availableDrivers.length === 0) {
-        listEl.innerHTML = `<div style="text-align:center; color:#64748b; padding:12px;">No active drivers online. Ask your driver for their Team PIN.</div>`;
-        return;
-    }
-
-    let html = '';
-    availableDrivers.forEach(d => {
-        html += `
-            <div class="roster-item" onclick="pairWithDriverId(${d.id})">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:10px; height:10px; border-radius:50%; background:${d.live ? '#22c55e' : '#64748b'};"></div>
-                    <div>
-                        <div style="font-weight:800; font-size:0.95rem;">${d.username}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">PIN: ${d.teamPin || 'N/A'} • ${d.position || 'P—'}</div>
-                    </div>
-                </div>
-                <button class="btn-pair-driver" style="font-size:0.75rem; padding:4px 8px;">LINK</button>
-            </div>
-        `;
-    });
-    listEl.innerHTML = html;
+    const modal = document.getElementById('pairing-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 async function pairWithDriverPin() {
     const pinInput = document.getElementById('input-team-pin');
-    const pin = pinInput ? pinInput.value.trim() : '';
-    if (!pin) return;
+    const statusEl = document.getElementById('pairing-status-msg');
+    const pin = pinInput ? pinInput.value.trim().toUpperCase() : '';
+
+    if (!pin) {
+        if (statusEl) {
+            statusEl.style.color = '#ef4444';
+            statusEl.textContent = 'Please enter a valid Team PIN (e.g. F1-8492)';
+        }
+        return;
+    }
 
     const token = localStorage.getItem('jwtToken');
+    if (statusEl) {
+        statusEl.style.color = '#7c3aed';
+        statusEl.textContent = 'Connecting to sim driver...';
+    }
+
     try {
         const res = await fetch('/api/engineer/pair', {
             method: 'POST',
@@ -685,52 +865,93 @@ async function pairWithDriverPin() {
 
         if (res.ok) {
             const data = await res.json();
-            const driverName = data.driverUsername || 'LINKED';
+            const driverName = (data.driverUsername || 'LINKED').toUpperCase();
             localStorage.setItem('pairedDriverName', driverName);
             if (data.driverId) localStorage.setItem('pairedDriverId', data.driverId);
+
             const pillEl = document.getElementById('paired-driver-name');
             if (pillEl) pillEl.textContent = driverName;
-            closePairingModal();
+
+            if (statusEl) {
+                statusEl.style.color = '#10b981';
+                statusEl.textContent = `Successfully connected to ${driverName}!`;
+            }
+
+            setTimeout(() => {
+                closePairingModal();
+            }, 800);
         } else {
             const err = await res.text();
-            alert("Pairing failed: " + err);
+            if (statusEl) {
+                statusEl.style.color = '#ef4444';
+                statusEl.textContent = err || 'Connection failed. Verify PIN and try again.';
+            }
         }
     } catch (e) {
-        alert("Network error pairing with driver.");
+        if (statusEl) {
+            statusEl.style.color = '#ef4444';
+            statusEl.textContent = 'Network error connecting to driver.';
+        }
     }
 }
 
-async function pairWithDriverId(driverId) {
+async function unpairDriver() {
     const token = localStorage.getItem('jwtToken');
+    const statusEl = document.getElementById('pairing-status-msg');
     try {
-        const res = await fetch('/api/engineer/pair', {
+        await fetch('/api/engineer/unpair', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ driverId: driverId })
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (res.ok) {
-            const data = await res.json();
-            const driverName = data.driverUsername || 'LINKED';
-            localStorage.setItem('pairedDriverName', driverName);
-            if (data.driverId) localStorage.setItem('pairedDriverId', data.driverId);
-            const pillEl = document.getElementById('paired-driver-name');
-            if (pillEl) pillEl.textContent = driverName;
-            closePairingModal();
-        }
     } catch (e) {}
+
+    localStorage.removeItem('pairedDriverName');
+    localStorage.removeItem('pairedDriverId');
+
+    const pillEl = document.getElementById('paired-driver-name');
+    if (pillEl) pillEl.textContent = 'LINK DRIVER PIN';
+
+    const linkedInfoEl = document.getElementById('paired-driver-info');
+    if (linkedInfoEl) linkedInfoEl.style.display = 'none';
+
+    if (statusEl) {
+        statusEl.style.color = '#64748b';
+        statusEl.textContent = 'Disconnected from driver.';
+    }
 }
 
 // ── Helpers & Formatting ──────────────────────────────────────────────────
-function getDriverCode(name, carIndex) {
-    if (!name) return `C${carIndex}`;
-    const clean = name.trim().toUpperCase();
-    if (DRIVER_CODE_MAP[clean]) return DRIVER_CODE_MAP[clean];
-    const parts = clean.split(/\s+/);
-    const lastName = parts[parts.length - 1];
-    return (lastName || clean).substring(0, 3);
+function getDriverCode(nameOrCar, carIndex) {
+    let car = (typeof nameOrCar === 'object' && nameOrCar !== null) ? nameOrCar : null;
+    let name = car ? car.name : nameOrCar;
+    let idx = car ? car.carIndex : carIndex;
+    let driverId = car ? car.driverId : -1;
+    let teamId = car ? car.teamId : undefined;
+
+    // 1. Official driverId lookup from F1 25 spec
+    if (driverId !== undefined && driverId >= 0 && OFFICIAL_DRIVER_IDS[driverId]) {
+        return OFFICIAL_DRIVER_IDS[driverId].code;
+    }
+
+    // 2. Name lookup
+    if (name && name.trim() !== '') {
+        const clean = name.trim().toUpperCase();
+        if (!clean.startsWith('CAR #') && !clean.startsWith('CAR#') && !clean.match(/^C\d+$/)) {
+            if (DRIVER_CODE_MAP[clean]) return DRIVER_CODE_MAP[clean];
+            const parts = clean.split(/\s+/);
+            const lastName = parts[parts.length - 1];
+            return (lastName || clean).substring(0, 3);
+        }
+    }
+
+    // 3. Fallback by teamId
+    if (teamId !== undefined && TEAM_DEFAULT_DRIVERS[teamId]) {
+        const drivers = TEAM_DEFAULT_DRIVERS[teamId];
+        const d = drivers[idx % 2] || drivers[0];
+        return d.code;
+    }
+
+    return `C${idx}`;
 }
 
 function getCompoundBadge(compoundId) {

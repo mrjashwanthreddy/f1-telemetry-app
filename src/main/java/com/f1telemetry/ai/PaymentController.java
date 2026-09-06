@@ -1,7 +1,7 @@
 package com.f1telemetry.ai;
 
-import com.f1telemetry.domain.User;
-import com.f1telemetry.repository.UserRepository;
+import com.f1telemetry.domain.SimDriver;
+import com.f1telemetry.repository.SimDriverRepository;
 import com.f1telemetry.service.AiPricingService;
 import com.f1telemetry.service.PreferenceService;
 import com.razorpay.Order;
@@ -29,15 +29,15 @@ public class PaymentController {
     @Value("${razorpay.key.secret}")
     private String keySecret;
 
-    private final UserRepository userRepository;
+    private final SimDriverRepository simDriverRepository;
     private final AiPricingService pricingService;
     private final PreferenceService preferenceService;
 
     @Autowired
-    public PaymentController(UserRepository userRepository,
+    public PaymentController(SimDriverRepository simDriverRepository,
                              AiPricingService pricingService,
                              PreferenceService preferenceService) {
-        this.userRepository = userRepository;
+        this.simDriverRepository = simDriverRepository;
         this.pricingService = pricingService;
         this.preferenceService = preferenceService;
     }
@@ -94,14 +94,14 @@ public class PaymentController {
             }
 
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
-            Optional<User> userOpt = userRepository.findByUsername(username);
-            if (userOpt.isEmpty()) {
+            Optional<SimDriver> driverOpt = simDriverRepository.findByUsername(username);
+            if (driverOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            User user = userOpt.get();
-            pricingService.addCredits(user, usdAmount);
+            SimDriver driver = driverOpt.get();
+            pricingService.addCredits(driver, usdAmount);
             preferenceService.evictCache(username);
-            log.info("Payment verified and credits added: orderId={}, amount=${} USD for user '{}'", 
+            log.info("Payment verified and credits added: orderId={}, amount=${} USD for driver '{}'", 
                     orderId, usdAmount, username);
 
             // Fetch new preferences to get updated balance

@@ -1,6 +1,6 @@
 package com.f1telemetry.service;
 
-import com.f1telemetry.domain.User;
+import com.f1telemetry.domain.SimDriver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -10,18 +10,22 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class ActiveUserService {
 
-    private final AtomicReference<User> activeUser = new AtomicReference<>(null);
+    private final AtomicReference<SimDriver> activeDriver = new AtomicReference<>(null);
 
-    public void setActiveUser(User user) {
-        User previousUser = activeUser.getAndSet(user);
-        if (previousUser == null || !previousUser.getUsername().equals(user.getUsername())) {
+    public void setActiveUser(SimDriver driver) {
+        SimDriver previousDriver = activeDriver.getAndSet(driver);
+        if (previousDriver == null || !previousDriver.getUsername().equals(driver.getUsername())) {
             log.info("Active player changed: '{}' → '{}'",
-                    previousUser != null ? previousUser.getUsername() : "none",
-                    user.getUsername());
+                    previousDriver != null ? previousDriver.getUsername() : "none",
+                    driver.getUsername());
         }
     }
 
-    public User getActiveUser() {
-        return activeUser.get();
+    public SimDriver getActiveUser() {
+        return activeDriver.get();
+    }
+
+    public SimDriver getActiveDriver() {
+        return activeDriver.get();
     }
 }

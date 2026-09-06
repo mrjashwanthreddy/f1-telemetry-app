@@ -42,20 +42,27 @@
                         <span>🎧</span> Race Engineer
                     </button>
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="group-username">
                     <label for="username">Username</label>
                     <input type="text" id="username" required placeholder="Enter username">
                 </div>
-                <div class="input-group">
-                    <label for="password">Password</label>
+                <div class="input-group" id="group-password">
+                    <label for="password" id="label-password">Password</label>
                     <input type="password" id="password" required placeholder="Enter password">
+                </div>
+                <div class="input-group" id="group-confirm-password" style="display:none;">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" id="confirm-password" placeholder="Re-enter new password">
                 </div>
                 <button type="submit" id="auth-submit-btn" class="auth-btn">LOGIN</button>
             </form>
 
-            <p class="auth-switch">
+            <p class="auth-switch" id="auth-switch-p">
                 <span id="auth-switch-text">New user?</span>
-                <a href="#" id="auth-switch-link" onclick="toggleAuthMode()">Sign up here</a>
+                <a href="#" id="auth-switch-link" onclick="toggleAuthMode(event)">Sign up here</a>
+            </p>
+            <p class="auth-switch" id="auth-forgot-p" style="margin-top: 6px;">
+                <a href="#" id="auth-forgot-link" onclick="toggleResetMode(event)" style="font-size:0.82rem; color:#7c3aed; font-weight:700;">Forgot password? Reset here</a>
             </p>
         </div>
     </div>
@@ -281,7 +288,7 @@
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">BEST LAP</th>
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">TYRE</th>
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">AGE</th>
-                                    <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">GAP</th>
+                                    <th id="th-timing-mode" style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; user-select:none;" onclick="toggleLeaderboardTimingMode()" title="Click to switch between Interval (to car ahead) and Gap (to P1 leader)">INTERVAL <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:400;">⇄</span></th>
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S1</th>
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S2</th>
                                     <th style="padding:8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">S3</th>

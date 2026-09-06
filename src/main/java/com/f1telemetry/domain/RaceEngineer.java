@@ -5,10 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "users")
+@Table(name = "race_engineers")
 @Data
 @NoArgsConstructor
-public class User {
+public class RaceEngineer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,24 +21,19 @@ public class User {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private Role role = Role.ROLE_DRIVER;
-
-    @Column(name = "team_pin")
-    private String teamPin;
+    @Column(nullable = false)
+    private Role role = Role.ROLE_ENGINEER;
 
     @Column(name = "assigned_driver_id")
     private Long assignedDriverId;
 
-    public User(String username, String passwordHash) {
-        this.username = username;
-        this.passwordHash = passwordHash;
-        this.role = Role.ROLE_DRIVER;
-    }
+    @Column(name = "created_at")
+    private Long createdAt;
 
-    public User(String username, String passwordHash, Role role) {
+    public RaceEngineer(String username, String passwordHash) {
         this.username = username;
         this.passwordHash = passwordHash;
-        this.role = role != null ? role : Role.ROLE_DRIVER;
+        this.role = Role.ROLE_ENGINEER;
+        this.createdAt = System.currentTimeMillis();
     }
 }

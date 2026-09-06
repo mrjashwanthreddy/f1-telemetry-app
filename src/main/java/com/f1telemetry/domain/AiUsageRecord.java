@@ -15,8 +15,8 @@ public class AiUsageRecord {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "driver_id", nullable = false)
+    private SimDriver driver;
 
     @Column(nullable = false)
     private long timestamp;
@@ -39,8 +39,8 @@ public class AiUsageRecord {
     @Column(name = "cost_usd", nullable = false, columnDefinition = "NUMERIC(10,6)")
     private double costUsd;
 
-    public AiUsageRecord(User user, long timestamp, String modelName, String feature, int inputUnits, int outputUnits, String unitType, double costUsd) {
-        this.user = user;
+    public AiUsageRecord(SimDriver driver, long timestamp, String modelName, String feature, int inputUnits, int outputUnits, String unitType, double costUsd) {
+        this.driver = driver;
         this.timestamp = timestamp;
         this.modelName = modelName;
         this.feature = feature;

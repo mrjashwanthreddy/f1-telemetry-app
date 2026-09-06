@@ -15,7 +15,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import com.f1telemetry.domain.User;
+import com.f1telemetry.domain.SimDriver;
 
 /**
  * Core AI service — calls the Gemini 2.0/1.5 API to generate
@@ -58,10 +58,10 @@ public class AiEngineerService {
     }
 
     public String getModelName() {
-        User activeUser = activeUserService.getActiveUser();
+        SimDriver activeUser = activeUserService.getActiveUser();
         if (activeUser != null) {
             try {
-                com.f1telemetry.domain.UserPreference prefs = preferenceRepository.findByUser(activeUser).orElse(null);
+                com.f1telemetry.domain.UserPreference prefs = preferenceRepository.findByDriver(activeUser).orElse(null);
                 if (prefs != null && prefs.getSelectedTextModel() != null) {
                     return prefs.getSelectedTextModel();
                 }
@@ -207,7 +207,7 @@ public class AiEngineerService {
                     result.length() > 120 ? result.substring(0, 120) + "..." : result);
 
             // Record usage in DB if user is present
-            User activeUser = activeUserService.getActiveUser();
+            SimDriver activeUser = activeUserService.getActiveUser();
             if (activeUser != null) {
                 double cost = pricingService.calculateTextCost(modelToUse, inputTokens, outputTokens);
                 usageRepository.save(new com.f1telemetry.domain.AiUsageRecord(

@@ -53,7 +53,7 @@ public class TelemetryBroadcastService {
 
             // Fetch user preferences dynamically for the active logged-in driver
             com.f1telemetry.domain.UserPreference prefs = null;
-            com.f1telemetry.domain.User activeUser = activeUserService.getActiveUser();
+            com.f1telemetry.domain.SimDriver activeUser = activeUserService.getActiveUser();
             if (activeUser != null) {
                 try {
                     prefs = preferenceService.getPreferences(activeUser.getUsername());

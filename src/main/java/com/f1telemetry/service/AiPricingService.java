@@ -1,6 +1,6 @@
 package com.f1telemetry.service;
 
-import com.f1telemetry.domain.User;
+import com.f1telemetry.domain.SimDriver;
 import com.f1telemetry.domain.UserPreference;
 import com.f1telemetry.repository.UserPreferenceRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,50 +55,49 @@ public class AiPricingService {
         return 0.0; // Local browser TTS is free
     }
 
-    public void accrueCharges(User user, double amount) {
-        UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
+    public void accrueCharges(SimDriver driver, double amount) {
+        UserPreference pref = preferenceRepository.findByDriver(driver).orElse(null);
         if (pref != null) {
             double currentAccrued = pref.getAccumulatedCharges() != null ? pref.getAccumulatedCharges() : 0.0;
             pref.setAccumulatedCharges(currentAccrued + amount);
             UserPreference saved = preferenceRepository.save(pref);
-            preferencesCache.put(user.getUsername(), saved); // Update cache
-            log.debug("Accrued ${} for user '{}' (total accrued: ${})", 
-                    String.format("%.6f", amount), user.getUsername(), 
+            preferencesCache.put(driver.getUsername(), saved); // Update cache
+            log.debug("Accrued ${} for driver '{}' (total accrued: ${})", 
+                    String.format("%.6f", amount), driver.getUsername(), 
                     String.format("%.6f", saved.getAccumulatedCharges()));
         }
     }
 
-    public boolean payAccruedCharges(User user) {
-        UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
+    public boolean payAccruedCharges(SimDriver driver) {
+        UserPreference pref = preferenceRepository.findByDriver(driver).orElse(null);
         if (pref == null) return false;
 
         double accrued = pref.getAccumulatedCharges() != null ? pref.getAccumulatedCharges() : 0.0;
         double currentBal = pref.getCreditBalance() != null ? pref.getCreditBalance() : 0.0;
 
         if (currentBal < accrued) {
-            log.warn("Payment failed for user '{}': insufficient credits (balance=${}, accrued=${})",
-                    user.getUsername(), String.format("%.4f", currentBal), String.format("%.4f", accrued));
+            log.warn("Payment failed for driver '{}': insufficient credits (balance=${}, accrued=${})",
+                    driver.getUsername(), String.format("%.4f", currentBal), String.format("%.4f", accrued));
             return false; // Insufficient credits in wallet
         }
         pref.setCreditBalance(currentBal - accrued);
         pref.setAccumulatedCharges(0.00);
         UserPreference saved = preferenceRepository.save(pref);
-        preferencesCache.put(user.getUsername(), saved); // Update cache
-        log.info("Payment processed for user '{}': ${} deducted, new balance=${}",
-                user.getUsername(), String.format("%.4f", accrued), String.format("%.4f", saved.getCreditBalance()));
+        preferencesCache.put(driver.getUsername(), saved); // Update cache
+        log.info("Payment processed for driver '{}': ${} deducted, new balance=${}",
+                driver.getUsername(), String.format("%.4f", accrued), String.format("%.4f", saved.getCreditBalance()));
         return true;
     }
     
-    public void addCredits(User user, double amount) {
-        UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
+    public void addCredits(SimDriver driver, double amount) {
+        UserPreference pref = preferenceRepository.findByDriver(driver).orElse(null);
         if (pref != null) {
             double currentBal = pref.getCreditBalance() != null ? pref.getCreditBalance() : 0.0;
             pref.setCreditBalance(currentBal + amount);
             UserPreference saved = preferenceRepository.save(pref);
-            preferencesCache.put(user.getUsername(), saved); // Update cache
-            log.info("Credits added for user '{}': +${}, new balance=${}",
-                    user.getUsername(), String.format("%.2f", amount), String.format("%.2f", saved.getCreditBalance()));
+            preferencesCache.put(driver.getUsername(), saved); // Update cache
+            log.info("Credits added for driver '{}': +${}, new balance=${}",
+                    driver.getUsername(), String.format("%.2f", amount), String.format("%.2f", saved.getCreditBalance()));
         }
     }
 }
-

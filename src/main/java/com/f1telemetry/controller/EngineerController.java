@@ -1,9 +1,9 @@
 package com.f1telemetry.controller;
 
-import com.f1telemetry.domain.Role;
-import com.f1telemetry.domain.User;
-import com.f1telemetry.repository.UserRepository;
-import com.f1telemetry.service.ActiveUserService;
+import com.f1telemetry.domain.RaceEngineer;
+import com.f1telemetry.domain.SimDriver;
+import com.f1telemetry.repository.RaceEngineerRepository;
+import com.f1telemetry.repository.SimDriverRepository;
 import com.f1telemetry.state.LiveSessionState;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +13,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -23,46 +22,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EngineerController {
 
-    private final UserRepository userRepository;
-    private final ActiveUserService activeUserService;
+    private final RaceEngineerRepository raceEngineerRepository;
+    private final SimDriverRepository simDriverRepository;
     private final LiveSessionState liveSessionState;
-
-    @GetMapping("/drivers")
-    public ResponseEntity<List<DriverSummaryDto>> getAvailableDrivers() {
-        List<User> drivers = userRepository.findByRole(Role.ROLE_DRIVER);
-        User activeUser = activeUserService.getActiveUser();
-        long now = System.currentTimeMillis();
-        boolean isDataLive = (now - liveSessionState.getLastUpdateTime()) < 5000;
-
-        List<DriverSummaryDto> dtoList = new ArrayList<>();
-        for (User driver : drivers) {
-            boolean isActive = activeUser != null && activeUser.getId().equals(driver.getId());
-            boolean isLive = isActive && isDataLive;
-
-            String currentLap = "—";
-            String position = "P—";
-            if (isLive && liveSessionState.getCars() != null && liveSessionState.getPlayerCarIndex() < liveSessionState.getCars().length) {
-                var playerCar = liveSessionState.getCars()[liveSessionState.getPlayerCarIndex()];
-                if (playerCar != null) {
-                    currentLap = String.valueOf(playerCar.getCurrentLapNum());
-                    position = "P" + playerCar.getPosition();
-                }
-            }
-
-            dtoList.add(new DriverSummaryDto(
-                    driver.getId(),
-                    driver.getUsername(),
-                    driver.getTeamPin(),
-                    isLive,
-                    isActive,
-                    currentLap,
-                    position,
-                    liveSessionState.getTrackId()
-            ));
-        }
-
-        return ResponseEntity.ok(dtoList);
-    }
 
     @PostMapping("/pair")
     public ResponseEntity<?> pairWithDriver(@RequestBody PairRequest request) {
@@ -72,34 +34,32 @@ public class EngineerController {
         }
 
         String engineerUsername = auth.getName();
-        User engineer = userRepository.findByUsername(engineerUsername).orElse(null);
+        RaceEngineer engineer = raceEngineerRepository.findByUsername(engineerUsername).orElse(null);
         if (engineer == null) {
-            return ResponseEntity.status(404).body("Engineer not found");
+            return ResponseEntity.status(404).body("Race Engineer profile not found.");
         }
 
-        User targetDriver = null;
-        if (request.getTeamPin() != null && !request.getTeamPin().trim().isEmpty()) {
-            targetDriver = userRepository.findByTeamPin(request.getTeamPin().trim().toUpperCase()).orElse(null);
-        } else if (request.getDriverUsername() != null && !request.getDriverUsername().trim().isEmpty()) {
-            targetDriver = userRepository.findByUsername(request.getDriverUsername().trim()).orElse(null);
-        } else if (request.getDriverId() != null) {
-            targetDriver = userRepository.findById(request.getDriverId()).orElse(null);
+        if (request.getTeamPin() == null || request.getTeamPin().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Team PIN is required to establish telemetry link.");
         }
 
-        if (targetDriver == null) {
-            return ResponseEntity.badRequest().body("Driver not found with provided credentials.");
+        String pin = request.getTeamPin().trim().toUpperCase();
+        Optional<SimDriver> targetDriverOpt = simDriverRepository.findByTeamPin(pin);
+        if (targetDriverOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("No Sim Driver found matching Team PIN '" + pin + "'.");
         }
 
+        SimDriver targetDriver = targetDriverOpt.get();
         engineer.setAssignedDriverId(targetDriver.getId());
-        userRepository.save(engineer);
-        log.info("Engineer '{}' successfully paired with Driver '{}' (ID: {})",
-                engineer.getUsername(), targetDriver.getUsername(), targetDriver.getId());
+        raceEngineerRepository.save(engineer);
+        log.info("Race Engineer '{}' successfully linked to Sim Driver '{}' (ID: {}, PIN: {})",
+                engineer.getUsername(), targetDriver.getUsername(), targetDriver.getId(), targetDriver.getTeamPin());
 
         return ResponseEntity.ok(Map.of(
                 "message", "Successfully linked to driver " + targetDriver.getUsername(),
                 "driverId", targetDriver.getId(),
                 "driverUsername", targetDriver.getUsername(),
-                "teamPin", targetDriver.getTeamPin() != null ? targetDriver.getTeamPin() : ""
+                "teamPin", targetDriver.getTeamPin()
         ));
     }
 
@@ -111,10 +71,11 @@ public class EngineerController {
         }
 
         String engineerUsername = auth.getName();
-        User engineer = userRepository.findByUsername(engineerUsername).orElse(null);
+        RaceEngineer engineer = raceEngineerRepository.findByUsername(engineerUsername).orElse(null);
         if (engineer != null) {
             engineer.setAssignedDriverId(null);
-            userRepository.save(engineer);
+            raceEngineerRepository.save(engineer);
+            log.info("Race Engineer '{}' disconnected from driver.", engineerUsername);
         }
 
         return ResponseEntity.ok(Map.of("message", "Unpaired from driver."));
@@ -128,12 +89,12 @@ public class EngineerController {
         }
 
         String engineerUsername = auth.getName();
-        User engineer = userRepository.findByUsername(engineerUsername).orElse(null);
+        RaceEngineer engineer = raceEngineerRepository.findByUsername(engineerUsername).orElse(null);
         if (engineer == null || engineer.getAssignedDriverId() == null) {
             return ResponseEntity.ok(Map.of("paired", false));
         }
 
-        User driver = userRepository.findById(engineer.getAssignedDriverId()).orElse(null);
+        SimDriver driver = simDriverRepository.findById(engineer.getAssignedDriverId()).orElse(null);
         if (driver == null) {
             return ResponseEntity.ok(Map.of("paired", false));
         }
@@ -154,19 +115,5 @@ public class EngineerController {
 
 @Data
 class PairRequest {
-    private Long driverId;
-    private String driverUsername;
     private String teamPin;
-}
-
-@Data
-class DriverSummaryDto {
-    private final Long id;
-    private final String username;
-    private final String teamPin;
-    private final boolean isLive;
-    private final boolean isActive;
-    private final String currentLap;
-    private final String position;
-    private final byte trackId;
 }

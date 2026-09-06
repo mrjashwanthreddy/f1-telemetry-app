@@ -25,6 +25,12 @@ public class LiveSessionState {
     private short rainPercentage;
     private short totalLaps;
     private short safetyCarStatus;
+    private short trackFlag = 1; // 1 = Green Flag default, 2 = Blue Flag, 3 = Yellow Flag
+    private boolean chequeredFlag = false;
+    private boolean redFlag = false;
+    private float sector2LapDistanceStart;
+    private float sector3LapDistanceStart;
+    private java.util.List<com.f1telemetry.dto.WeatherForecastDTO> weatherForecasts = new java.util.ArrayList<>();
 
     // Weekend link and multiplayer status
     private long weekendLinkIdentifier;
@@ -60,6 +66,12 @@ public class LiveSessionState {
         this.rainPercentage = 0;
         this.totalLaps = 0;
         this.safetyCarStatus = 0;
+        this.trackFlag = 1;
+        this.chequeredFlag = false;
+        this.redFlag = false;
+        this.sector2LapDistanceStart = 0;
+        this.sector3LapDistanceStart = 0;
+        this.weatherForecasts = new java.util.ArrayList<>();
         this.weekendLinkIdentifier = 0;
         this.gameMode = 0;
         this.networkGame = 0;
@@ -67,7 +79,13 @@ public class LiveSessionState {
         this.playerCarIndex = 0;
         this.lastUpdateTime = 0;
         for (int i = 0; i < 22; i++) {
+            String prevName = (this.cars[i] != null) ? this.cars[i].getName() : null;
+            short prevTeam = (this.cars[i] != null) ? this.cars[i].getTeamId() : 0;
+            short prevDriverId = (this.cars[i] != null) ? this.cars[i].getDriverId() : -1;
             this.cars[i] = new CarState(i);
+            this.cars[i].setName(prevName);
+            this.cars[i].setTeamId(prevTeam);
+            this.cars[i].setDriverId(prevDriverId);
         }
     }
 }

@@ -2,7 +2,7 @@ package com.f1telemetry.controller;
 
 import com.f1telemetry.domain.UserPreference;
 import com.f1telemetry.network.UdpServer;
-import com.f1telemetry.repository.UserRepository;
+import com.f1telemetry.repository.SimDriverRepository;
 import com.f1telemetry.service.ActiveUserService;
 import com.f1telemetry.service.PreferenceService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TelemetrySessionController {
 
     private final ActiveUserService activeUserService;
-    private final UserRepository userRepository;
+    private final SimDriverRepository simDriverRepository;
     private final PreferenceService preferenceService;
     private final UdpServer udpServer;
 
@@ -33,13 +33,10 @@ public class TelemetrySessionController {
         }
 
         String username = auth.getName();
-        userRepository.findByUsername(username).ifPresentOrElse(user -> {
-            activeUserService.setActiveUser(user);
-            log.info("User {} is now the Active Player. UDP Telemetry will be attributed to this user.", username);
+        simDriverRepository.findByUsername(username).ifPresentOrElse(driver -> {
+            activeUserService.setActiveUser(driver);
+            log.info("Sim Driver {} is now the Active Player. UDP Telemetry will be attributed to this driver.", username);
             
-            // Fetch this user's preferences and adjust the UDP host/port dynamically.
-            // Force 0.0.0.0 if the stored value is the old loopback default (127.0.0.1),
-            // which only worked for local installs, not cloud deployments.
             try {
                 UserPreference prefs = preferenceService.getPreferences(username);
                 String udpHost = prefs.getUdpHost();
@@ -48,9 +45,9 @@ public class TelemetrySessionController {
                 }
                 udpServer.restart(udpHost, prefs.getUdpPort());
             } catch (Exception e) {
-                log.error("Failed to load user preferences and restart UDP server on session start", e);
+                log.error("Failed to load driver preferences and restart UDP server on session start", e);
             }
-        }, () -> log.warn("User {} not found in database", username));
+        }, () -> log.warn("Sim Driver {} not found in database", username));
 
         return ResponseEntity.ok("Session started successfully");
     }

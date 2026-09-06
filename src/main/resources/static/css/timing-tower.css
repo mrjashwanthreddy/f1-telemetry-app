@@ -6,7 +6,9 @@
     width: 280px;
     min-width: 280px;
     max-width: 300px;
-    background: rgba(255, 255, 255, 0.82);
+    height: 100%;
+    max-height: 100%;
+    background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(28px) saturate(180%);
     -webkit-backdrop-filter: blur(28px) saturate(180%);
     border: 1.5px solid rgba(255, 255, 255, 0.95);
@@ -111,12 +113,13 @@
 /* Tower Driver Rows Stack */
 .timing-tower-rows {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 4px 0;
+    padding: 6px 0;
     display: flex;
     flex-direction: column;
-    gap: 1.5px;
+    gap: 2px;
     background: rgba(255, 255, 255, 0.4);
 }
 
@@ -125,32 +128,33 @@
 }
 
 .timing-tower-rows::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.25);
     border-radius: 2px;
 }
 
 /* Single Timing Row */
 .tower-row {
     display: grid;
-    grid-template-columns: 24px 6px 42px 1fr 22px;
+    grid-template-columns: 26px 6px 48px 1fr 24px;
     align-items: center;
-    height: 28px;
-    padding: 0 8px 0 6px;
-    background: rgba(255, 255, 255, 0.65);
+    min-height: 31px;
+    height: 31px;
+    padding: 0 10px 0 8px;
+    background: rgba(255, 255, 255, 0.7);
     border-left: 2px solid transparent;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.05);
+    border-bottom: 1px solid rgba(139, 92, 246, 0.08);
     cursor: pointer;
     transition: background 0.15s ease, transform 0.1s ease;
     position: relative;
 }
 
 .tower-row:hover {
-    background: rgba(243, 232, 255, 0.9);
+    background: rgba(243, 232, 255, 0.95);
 }
 
 .tower-row.p1-row {
-    background: rgba(254, 243, 199, 0.45);
-    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+    background: rgba(254, 243, 199, 0.55);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 /* Highlighted Monitored Driver Row */
@@ -160,7 +164,8 @@
     box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
     border-radius: 6px;
     margin: 1px 4px;
-    height: 30px;
+    min-height: 33px;
+    height: 33px;
     z-index: 5;
     font-weight: 900;
 }
@@ -216,6 +221,20 @@
     padding-left: 5px;
     white-space: nowrap;
     text-transform: uppercase;
+    display: flex;
+    align-items: center;
+}
+
+.tower-player-badge {
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.55rem;
+    font-weight: 900;
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 5px;
+    letter-spacing: 0.5px;
+    display: inline-block;
 }
 
 /* Interval / Gap Delta */
@@ -303,13 +322,14 @@
 
 /* Tower Footer Status Indicator */
 .timing-tower-footer {
-    padding: 8px 12px;
-    background: rgba(243, 232, 255, 0.85);
-    border-top: 1px solid rgba(139, 92, 246, 0.15);
+    flex-shrink: 0;
+    padding: 10px 14px;
+    background: rgba(243, 232, 255, 0.92);
+    border-top: 1.5px solid rgba(139, 92, 246, 0.18);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 800;
     color: #6b21a8;
 }
@@ -348,6 +368,29 @@
     color: #ffffff;
     border: 1px solid #ef4444;
     animation: pulse-warn 0.8s infinite;
+}
+
+.tower-safety-car-pill.yellow-flag {
+    background: rgba(234, 179, 8, 0.25);
+    color: #ca8a04;
+    border: 1px solid rgba(234, 179, 8, 0.6);
+    animation: pulse-warn 1.2s infinite;
+}
+
+.tower-safety-car-pill.formation-lap {
+    background: rgba(59, 130, 246, 0.2);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.tower-safety-car-pill.chequered-flag {
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #94a3b8;
+    background-image: repeating-linear-gradient(45deg, #000 0, #000 4px, #fff 4px, #fff 8px);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    border: 1px solid #f8fafc;
 }
 
 @keyframes pulse-warn {

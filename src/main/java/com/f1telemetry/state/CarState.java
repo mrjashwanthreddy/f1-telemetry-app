@@ -38,6 +38,10 @@ public class CarState {
     private int sector1TimeInMS;
     private int sector2TimeInMS;
 
+    // Realtime Deltas (Interval to car in front, Gap to leader)
+    private int deltaToCarInFrontInMS;
+    private int deltaToLeaderInMS;
+
     // Status
     private float fuelInTank;
     private float fuelRemainingLaps;
@@ -56,6 +60,7 @@ public class CarState {
     // Participant details
     private String name;
     private short teamId;
+    private short driverId = -1;
 
     // Completed lap sector times and personal bests tracked on the backend
     private int lastLapSector1TimeInMS;

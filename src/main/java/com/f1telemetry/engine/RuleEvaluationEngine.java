@@ -23,7 +23,7 @@ public class RuleEvaluationEngine {
     private final RaceSessionRepository sessionRepository;
     private final LapTimeRecordRepository lapRepository;
     private final com.f1telemetry.service.ActiveUserService activeUserService;
-    private final com.f1telemetry.repository.UserRepository userRepository;
+    private final com.f1telemetry.repository.SimDriverRepository simDriverRepository;
     private final com.f1telemetry.ai.AiLapAlertService aiLapAlertService;
 
     // ── F1 25 Track ID → Circuit Name ─────────────────────────────────────────
@@ -207,17 +207,17 @@ public class RuleEvaluationEngine {
     }
 
     private RaceSession createOrGetSession(LiveSessionState state) {
-        com.f1telemetry.domain.User rawUser = activeUserService.getActiveUser();
+        com.f1telemetry.domain.SimDriver rawUser = activeUserService.getActiveUser();
         if (rawUser == null) {
-            rawUser = userRepository.findByUsername("jashwanth")
-                .orElseGet(() -> userRepository.findAll().stream().findFirst().orElse(null));
+            rawUser = simDriverRepository.findByUsername("jashwanth")
+                .orElseGet(() -> simDriverRepository.findAll().stream().findFirst().orElse(null));
             if (rawUser == null) {
-                log.warn("No active player registered and no users found in DB. Cannot save session.");
+                log.warn("No active player registered and no sim drivers found in DB. Cannot save session.");
                 return null;
             }
         }
 
-        final com.f1telemetry.domain.User activeUser = rawUser;
+        final com.f1telemetry.domain.SimDriver activeUser = rawUser;
         String dbSessionId = getDbSessionId(state);
 
         return sessionRepository.findBySessionId(dbSessionId).map(session -> {

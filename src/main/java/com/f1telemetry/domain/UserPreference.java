@@ -15,15 +15,15 @@ public class UserPreference {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", unique = true, nullable = false)
-    private User user;
+    @JoinColumn(name = "driver_id", unique = true, nullable = false)
+    private SimDriver driver;
 
     private float tireOverheatTemp = 100.0f;
     private float brakeOverheatTemp = 1000.0f;
     private float criticalFuelDelta = 0.5f;
     private float lowBatteryPercentage = 10.0f;
 
-    // Phase 10: Customizable voice query hotkey (default Scroll Lock = keycode 70)
+    // Customizable voice query hotkey (default Scroll Lock = keycode 70)
     private Integer voiceHotkey = 70;
     private String voiceHotkeyLabel = "Scroll Lock";
 
@@ -44,7 +44,7 @@ public class UserPreference {
         this.aiEnabled = aiEnabled;
     }
 
-    // UDP ingestion configurations — 0.0.0.0 = listen on all interfaces (required for cloud deployment)
+    // UDP ingestion configurations — 0.0.0.0 = listen on all interfaces
     private String udpHost = "0.0.0.0";
     private Integer udpPort = 20777;
 
@@ -64,7 +64,7 @@ public class UserPreference {
         return voiceHotkeyLabel != null ? voiceHotkeyLabel : "Scroll Lock";
     }
 
-    public UserPreference(User user) {
-        this.user = user;
+    public UserPreference(SimDriver driver) {
+        this.driver = driver;
     }
 }

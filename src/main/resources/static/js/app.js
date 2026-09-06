@@ -462,6 +462,156 @@ function getTeamInfo(teamId) {
     return TEAM_INFO[teamId] || { name: 'Formula 1', color: '#64748b', text: '#ffffff' };
 }
 
+// Timing mode for standings table: 'interval' (gap to car ahead) or 'gap' (gap to P1 leader)
+let leaderboardTimingMode = 'interval';
+
+function toggleLeaderboardTimingMode() {
+    leaderboardTimingMode = (leaderboardTimingMode === 'interval') ? 'gap' : 'interval';
+    const thEl = document.getElementById('th-timing-mode');
+    if (thEl) {
+        thEl.innerHTML = (leaderboardTimingMode === 'interval')
+            ? 'INTERVAL <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:400;">⇄</span>'
+            : 'GAP TO P1 <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:400;">⇄</span>';
+        thEl.title = (leaderboardTimingMode === 'interval')
+            ? 'Click to switch to Gap to P1 Leader'
+            : 'Click to switch to Interval (gap to car ahead)';
+    }
+}
+
+// Official F1 25 Driver IDs from EA Sports F1 25 UDP Telemetry Spec Appendix (p. 24)
+const OFFICIAL_DRIVER_IDS = {
+    0: { name: 'Carlos Sainz', code: 'SAI' },
+    2: { name: 'Daniel Ricciardo', code: 'RIC' },
+    3: { name: 'Fernando Alonso', code: 'ALO' },
+    4: { name: 'Felipe Massa', code: 'MAS' },
+    7: { name: 'Lewis Hamilton', code: 'HAM' },
+    9: { name: 'Max Verstappen', code: 'VER' },
+    10: { name: 'Nico Hülkenberg', code: 'HUL' },
+    11: { name: 'Kevin Magnussen', code: 'MAG' },
+    14: { name: 'Sergio Pérez', code: 'PER' },
+    15: { name: 'Valtteri Bottas', code: 'BOT' },
+    17: { name: 'Esteban Ocon', code: 'OCO' },
+    19: { name: 'Lance Stroll', code: 'STR' },
+    50: { name: 'George Russell', code: 'RUS' },
+    54: { name: 'Lando Norris', code: 'NOR' },
+    58: { name: 'Charles Leclerc', code: 'LEC' },
+    59: { name: 'Pierre Gasly', code: 'GAS' },
+    62: { name: 'Alexander Albon', code: 'ALB' },
+    80: { name: 'Guanyu Zhou', code: 'ZHO' },
+    94: { name: 'Yuki Tsunoda', code: 'TSU' },
+    112: { name: 'Oscar Piastri', code: 'PIA' },
+    113: { name: 'Liam Lawson', code: 'LAW' },
+    132: { name: 'Logan Sargeant', code: 'SAR' },
+    136: { name: 'Jack Doohan', code: 'DOO' },
+    147: { name: 'Oliver Bearman', code: 'BEA' },
+    149: { name: 'Isack Hadjar', code: 'HAD' },
+    161: { name: 'Gabriel Bortoleto', code: 'BOR' },
+    162: { name: 'Franco Colapinto', code: 'COL' },
+    165: { name: 'Kimi Antonelli', code: 'ANT' }
+};
+
+// Known driver name string mapping
+const DRIVER_NAME_MAP = {
+    'VERSTAPPEN': { name: 'Max Verstappen', code: 'VER' },
+    'LECLERC': { name: 'Charles Leclerc', code: 'LEC' },
+    'HAMILTON': { name: 'Lewis Hamilton', code: 'HAM' },
+    'NORRIS': { name: 'Lando Norris', code: 'NOR' },
+    'PIASTRI': { name: 'Oscar Piastri', code: 'PIA' },
+    'RUSSELL': { name: 'George Russell', code: 'RUS' },
+    'SAINZ': { name: 'Carlos Sainz', code: 'SAI' },
+    'ALONSO': { name: 'Fernando Alonso', code: 'ALO' },
+    'STROLL': { name: 'Lance Stroll', code: 'STR' },
+    'GASLY': { name: 'Pierre Gasly', code: 'GAS' },
+    'OCON': { name: 'Esteban Ocon', code: 'OCO' },
+    'ALBON': { name: 'Alexander Albon', code: 'ALB' },
+    'TSUNODA': { name: 'Yuki Tsunoda', code: 'TSU' },
+    'LAWSON': { name: 'Liam Lawson', code: 'LAW' },
+    'HULKENBERG': { name: 'Nico Hülkenberg', code: 'HUL' },
+    'ANTONELLI': { name: 'Kimi Antonelli', code: 'ANT' },
+    'BEARMAN': { name: 'Oliver Bearman', code: 'BEA' },
+    'HADJAR': { name: 'Isack Hadjar', code: 'HAD' },
+    'COLAPINTO': { name: 'Franco Colapinto', code: 'COL' },
+    'BORTOLETO': { name: 'Gabriel Bortoleto', code: 'BOR' },
+    'DOOHAN': { name: 'Jack Doohan', code: 'DOO' },
+    'BOTTAS': { name: 'Valtteri Bottas', code: 'BOT' },
+    'ZHOU': { name: 'Guanyu Zhou', code: 'ZHO' },
+    'MAGNUSSEN': { name: 'Kevin Magnussen', code: 'MAG' },
+    'SARGEANT': { name: 'Logan Sargeant', code: 'SAR' },
+    'RICCIARDO': { name: 'Daniel Ricciardo', code: 'RIC' },
+    'PEREZ': { name: 'Sergio Pérez', code: 'PER' }
+};
+
+// Team default driver rosters (used before packet 4 arrives or when names are unpopulated)
+const TEAM_DEFAULT_DRIVERS = {
+    0: [{ name: 'George Russell', code: 'RUS' }, { name: 'Kimi Antonelli', code: 'ANT' }],
+    1: [{ name: 'Charles Leclerc', code: 'LEC' }, { name: 'Lewis Hamilton', code: 'HAM' }],
+    2: [{ name: 'Max Verstappen', code: 'VER' }, { name: 'Yuki Tsunoda', code: 'TSU' }],
+    3: [{ name: 'Alexander Albon', code: 'ALB' }, { name: 'Carlos Sainz', code: 'SAI' }],
+    4: [{ name: 'Fernando Alonso', code: 'ALO' }, { name: 'Lance Stroll', code: 'STR' }],
+    5: [{ name: 'Pierre Gasly', code: 'GAS' }, { name: 'Franco Colapinto', code: 'COL' }],
+    6: [{ name: 'Liam Lawson', code: 'LAW' }, { name: 'Isack Hadjar', code: 'HAD' }],
+    7: [{ name: 'Esteban Ocon', code: 'OCO' }, { name: 'Oliver Bearman', code: 'BEA' }],
+    8: [{ name: 'Lando Norris', code: 'NOR' }, { name: 'Oscar Piastri', code: 'PIA' }],
+    9: [{ name: 'Nico Hülkenberg', code: 'HUL' }, { name: 'Gabriel Bortoleto', code: 'BOR' }]
+};
+
+function resolveDriverInfo(car, isPlayer) {
+    const localUser = localStorage.getItem('activeUsername') || localStorage.getItem('username');
+
+    // 1. Match by official driverId if present
+    if (car && car.driverId !== undefined && car.driverId >= 0 && OFFICIAL_DRIVER_IDS[car.driverId]) {
+        const info = OFFICIAL_DRIVER_IDS[car.driverId];
+        return {
+            code: info.code,
+            displayName: isPlayer && localUser ? `${info.name} (${localUser})` : info.name,
+            fullName: info.name
+        };
+    }
+
+    // 2. Match by decoded name from Packet 4
+    if (car && car.name && car.name.trim() !== '') {
+        const raw = car.name.trim();
+        const upper = raw.toUpperCase();
+        if (!upper.startsWith('CAR #') && !upper.startsWith('CAR#') && !upper.match(/^C\d+$/)) {
+            if (DRIVER_NAME_MAP[upper]) {
+                const info = DRIVER_NAME_MAP[upper];
+                return {
+                    code: info.code,
+                    displayName: isPlayer && localUser ? `${info.name} (${localUser})` : info.name,
+                    fullName: info.name
+                };
+            }
+            // Real custom multiplayer / LAN name
+            const parts = raw.split(/\s+/);
+            const code = (parts.length >= 2 ? parts[parts.length - 1] : parts[0]).substring(0, 3).toUpperCase();
+            return {
+                code: code,
+                displayName: isPlayer && localUser ? `${raw} (${localUser})` : raw,
+                fullName: raw
+            };
+        }
+    }
+
+    // 3. Fallback by teamId
+    if (car && car.teamId !== undefined && TEAM_DEFAULT_DRIVERS[car.teamId]) {
+        const roster = TEAM_DEFAULT_DRIVERS[car.teamId];
+        const assigned = roster[car.carIndex % 2] || roster[0];
+        return {
+            code: assigned.code,
+            displayName: isPlayer && localUser ? `${assigned.name} (${localUser})` : assigned.name,
+            fullName: assigned.name
+        };
+    }
+
+    // 4. Fallback for Player vs AI
+    if (isPlayer) {
+        const name = localUser || 'PLAYER';
+        return { code: 'YOU', displayName: `${name} (YOU)`, fullName: name };
+    }
+    const idx = (car && car.carIndex !== undefined) ? car.carIndex : 0;
+    return { code: `C${idx}`, displayName: `Car #${idx}`, fullName: `Car #${idx}` };
+}
+
 // In-memory driver sector state tracking
 const driverStates = {};
 
@@ -472,21 +622,7 @@ let sessionBestS3 = Infinity;
 let sessionBestLap = Infinity;
 
 function getDriverAbbreviation(name, carIndex) {
-    if (!name) return `C${carIndex}`;
-    const cleaned = name.trim().toUpperCase();
-    if (cleaned.startsWith("CAR #")) {
-        return "C" + cleaned.substring(5);
-    }
-    if (cleaned.startsWith("CAR#")) {
-        return "C" + cleaned.substring(4);
-    }
-    const parts = cleaned.split(/\s+/);
-    if (parts.length >= 2) {
-        const lastName = parts[parts.length - 1];
-        return lastName.substring(0, 3);
-    } else {
-        return cleaned.substring(0, 3);
-    }
+    return resolveDriverInfo({ name, carIndex }, false).code;
 }
 
 function formatSectorTime(ms) {
@@ -586,7 +722,8 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         }
         marker.style.left = `${pct}%`;
         marker.textContent = car.position;
-        marker.title = `${car.name || 'Car #' + car.carIndex} (P${car.position}) - ${Math.round(car.lapDistance)}m`;
+        const dInfo = resolveDriverInfo(car, car.carIndex === playerIdx);
+        marker.title = `${dInfo.fullName} (P${car.position}) - ${Math.round(car.lapDistance)}m`;
         
         markersContainer.appendChild(marker);
     });
@@ -632,13 +769,17 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         }
         
         const teamInfo = getTeamInfo(car.teamId);
-        const driverAbbr = getDriverAbbreviation(car.name, car.carIndex);
+        const driverInfo = resolveDriverInfo(car, isPlayer);
         
-        // Driver badge style (Team color tag)
+        // Driver badge style (Team color tag + 3-letter code + full driver name)
         const driverBadge = `
-            <div class="driver-badge-container">
-                <span class="driver-badge-pos" style="border-left: 3px solid ${teamInfo.color};">${car.position}</span>
-                <span class="driver-badge-abbr" style="background: ${teamInfo.color}; color: ${teamInfo.text};">${driverAbbr}</span>
+            <div class="driver-cell" style="display:flex; align-items:center; gap:8px;">
+                <div class="driver-badge-container" style="flex-shrink:0;">
+                    <span class="driver-badge-pos" style="border-left: 3px solid ${teamInfo.color};">${car.position}</span>
+                    <span class="driver-badge-abbr" style="background: ${teamInfo.color}; color: ${teamInfo.text};">${driverInfo.code}</span>
+                </div>
+                <span class="driver-name-text" style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;" title="${driverInfo.fullName}">${driverInfo.displayName}</span>
+                ${isPlayer ? '<span style="background:rgba(225,6,0,0.2); color:#e10600; border:1px solid rgba(225,6,0,0.5); font-size:0.68rem; font-weight:800; padding:1px 5px; border-radius:3px; margin-left:2px; flex-shrink:0;">YOU</span>' : ''}
             </div>
         `;
         
@@ -647,11 +788,32 @@ function updateLeaderboardAndTimeline(data, playerIdx) {
         const tyreComp = getCompoundName(car.visualTyreCompound);
         const tyreBadge = `<span style="background:${tyreComp.bg}; color:${tyreComp.color}; padding:4px 10px; border-radius:4px; font-size:0.85rem; font-weight:800;">${tyreComp.text}</span>`;
         
-        // Gap calculation
+        // Real-time F1 In-Game Interval / Gap calculation (Live dynamic updates)
         let gapText = '—';
-        if (car.position > 1 && leaderBestLap > 0 && car.bestLapTimeInMS > 0) {
-            const diff = car.bestLapTimeInMS - leaderBestLap;
-            gapText = `+${(diff / 1000).toFixed(3)}`;
+        if (car.position === 1) {
+            gapText = leaderboardTimingMode === 'interval' ? 'INTERVAL' : 'LEADER';
+        } else if (car.resultStatus === 4 || car.resultStatus === 5) {
+            gapText = 'OUT';
+        } else if (car.resultStatus === 6) {
+            gapText = 'IN PIT';
+        } else if (leaderboardTimingMode === 'interval') {
+            // Live interval to car immediately in front
+            if (car.deltaToCarInFrontInMS > 0) {
+                gapText = `+${(car.deltaToCarInFrontInMS / 1000.0).toFixed(3)}`;
+            } else if (car.deltaToLeaderInMS > 0) {
+                gapText = `+${(car.deltaToLeaderInMS / 1000.0).toFixed(3)}`;
+            } else if (leaderBestLap > 0 && car.bestLapTimeInMS > 0) {
+                const diff = car.bestLapTimeInMS - leaderBestLap;
+                gapText = diff > 0 ? `+${(diff / 1000.0).toFixed(3)}` : '—';
+            }
+        } else {
+            // Live gap to race leader (P1)
+            if (car.deltaToLeaderInMS > 0) {
+                gapText = `+${(car.deltaToLeaderInMS / 1000.0).toFixed(3)}`;
+            } else if (leaderBestLap > 0 && car.bestLapTimeInMS > 0) {
+                const diff = car.bestLapTimeInMS - leaderBestLap;
+                gapText = diff > 0 ? `+${(diff / 1000.0).toFixed(3)}` : '—';
+            }
         }
         
         // Sector displays (live vs last lap completed fallback)

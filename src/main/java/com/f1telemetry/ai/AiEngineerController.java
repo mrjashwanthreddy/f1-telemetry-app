@@ -5,7 +5,6 @@ import com.f1telemetry.domain.RaceSession;
 import com.f1telemetry.engine.RuleEvaluationEngine;
 import com.f1telemetry.repository.LapTimeRecordRepository;
 import com.f1telemetry.repository.RaceSessionRepository;
-import com.f1telemetry.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +31,7 @@ public class AiEngineerController {
     private final AiEngineerService aiEngineerService;
     private final LapTimeRecordRepository lapRepository;
     private final RaceSessionRepository sessionRepository;
-    private final UserRepository userRepository;
+    private final com.f1telemetry.repository.SimDriverRepository simDriverRepository;
     private final CornerAnalysisService cornerAnalysisService;
     private final GlobalHotkeyService globalHotkeyService;
     private final com.f1telemetry.service.PreferenceService preferenceService;
@@ -132,9 +131,9 @@ public class AiEngineerController {
             ));
         }
 
-        Optional<RaceSession> sessionOpt = userRepository.findByUsername(username)
+        Optional<RaceSession> sessionOpt = simDriverRepository.findByUsername(username)
             .flatMap(user -> sessionRepository.findBySessionId(sessionId)
-                .filter(s -> s.getUser().getId().equals(user.getId())));
+                .filter(s -> s.getDriver().getId().equals(user.getId())));
 
         if (sessionOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -243,9 +242,9 @@ public class AiEngineerController {
             return ResponseEntity.badRequest().body(Map.of("error", "Question cannot be empty."));
         }
 
-        Optional<RaceSession> sessionOpt = userRepository.findByUsername(username)
+        Optional<RaceSession> sessionOpt = simDriverRepository.findByUsername(username)
             .flatMap(user -> sessionRepository.findBySessionId(request.getSessionId())
-                .filter(s -> s.getUser().getId().equals(user.getId())));
+                .filter(s -> s.getDriver().getId().equals(user.getId())));
 
         if (sessionOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -355,12 +354,12 @@ public class AiEngineerController {
     @GetMapping("/usage/summary")
     public ResponseEntity<?> getUsageSummary() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        Optional<com.f1telemetry.domain.SimDriver> userOpt = simDriverRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        com.f1telemetry.domain.User user = userOpt.get();
-        double totalSpent = usageRecordRepository.getTotalSpentByUser(user);
+        com.f1telemetry.domain.SimDriver user = userOpt.get();
+        double totalSpent = usageRecordRepository.getTotalSpentByDriver(user);
         List<Map<String, Object>> modelUsage = usageRecordRepository.getUsageGroupByModel(user);
         
         return ResponseEntity.ok(Map.of(
@@ -384,11 +383,11 @@ public class AiEngineerController {
         }
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        Optional<com.f1telemetry.domain.SimDriver> userOpt = simDriverRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        com.f1telemetry.domain.User user = userOpt.get();
+        com.f1telemetry.domain.SimDriver user = userOpt.get();
         pricingService.addCredits(user, amount);
         preferenceService.evictCache(username);
         com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
@@ -402,11 +401,11 @@ public class AiEngineerController {
     @PostMapping("/billing/pay")
     public ResponseEntity<?> payAccruedCharges() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        Optional<com.f1telemetry.domain.SimDriver> userOpt = simDriverRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        com.f1telemetry.domain.User user = userOpt.get();
+        com.f1telemetry.domain.SimDriver user = userOpt.get();
         boolean success = pricingService.payAccruedCharges(user);
         preferenceService.evictCache(username);
         com.f1telemetry.domain.UserPreference prefs = preferenceService.getPreferences(username);
@@ -434,11 +433,11 @@ public class AiEngineerController {
         }
         
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<com.f1telemetry.domain.User> userOpt = userRepository.findByUsername(username);
+        Optional<com.f1telemetry.domain.SimDriver> userOpt = simDriverRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        com.f1telemetry.domain.User user = userOpt.get();
+        com.f1telemetry.domain.SimDriver user = userOpt.get();
         
         double cost = pricingService.calculateTtsCost("GOOGLE_CLOUD_TTS", text.length());
         pricingService.accrueCharges(user, cost);

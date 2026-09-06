@@ -24,12 +24,13 @@ public class PacketParser {
             java.util.Map.entry(PacketIds.SESSION, 753),
             java.util.Map.entry(PacketIds.LAP_DATA, 1285),
             java.util.Map.entry(PacketIds.EVENT, 45),
-            java.util.Map.entry(PacketIds.PARTICIPANTS, 1284),
+            java.util.Map.entry(PacketIds.PARTICIPANTS, 1250),
             java.util.Map.entry(PacketIds.CAR_SETUPS, 1133),
             java.util.Map.entry(PacketIds.CAR_TELEMETRY, 1352),
             java.util.Map.entry(PacketIds.CAR_STATUS, 1239),
             java.util.Map.entry(PacketIds.FINAL_CLASSIFICATION, 1042),
-            java.util.Map.entry(PacketIds.CAR_DAMAGE, 1041)
+            java.util.Map.entry(PacketIds.CAR_DAMAGE, 1041),
+            java.util.Map.entry(PacketIds.SESSION_HISTORY, 1460)
     );
 
     /**
@@ -64,6 +65,7 @@ public class PacketParser {
             case PacketIds.CAR_STATUS -> deserializer.deserializeCarStatus(header, buf);
             case PacketIds.FINAL_CLASSIFICATION -> deserializer.deserializeFinalClassification(header, buf);
             case PacketIds.CAR_DAMAGE -> deserializer.deserializeCarDamage(header, buf);
+            case PacketIds.SESSION_HISTORY -> deserializer.deserializeSessionHistory(header, buf);
             default -> {
                 log.debug("Unsupported packet ID: {}", header.getPacketId());
                 yield null;

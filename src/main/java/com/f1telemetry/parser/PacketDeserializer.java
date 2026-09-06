@@ -329,9 +329,18 @@ public class PacketDeserializer {
     public PacketParticipantsData deserializeParticipants(PacketHeader header, ByteBuf buf) {
         PacketParticipantsData packet = new PacketParticipantsData();
         packet.setHeader(header);
+        if (buf.readableBytes() < 1) {
+            return packet;
+        }
         packet.setNumActiveCars(buf.readUnsignedByte());
 
+        // In F1 25, m_name is 32 chars (per official F1 25 spec p.18); in F1 24/23, it is 48 chars
+        int nameLength = (header.getGameYear() == 25) ? 32 : 48;
+
         for (int i = 0; i < 22; i++) {
+            if (buf.readableBytes() < 7) {
+                break;
+            }
             ParticipantData pd = new ParticipantData();
             pd.setAiControlled(buf.readUnsignedByte());
             pd.setDriverId(buf.readUnsignedByte());
@@ -340,29 +349,34 @@ public class PacketDeserializer {
             pd.setMyTeam(buf.readUnsignedByte());
             pd.setRaceNumber(buf.readUnsignedByte());
             pd.setNationality(buf.readUnsignedByte());
-            // Dynamic name length: 48 bytes in F1 24, 32 bytes in F1 23/25
-            int nameLength = (header.getGameYear() == 24) ? 48 : 32;
-            byte[] nameBytes = new byte[nameLength];
+
+            int readNameLen = Math.min(nameLength, buf.readableBytes());
+            byte[] nameBytes = new byte[readNameLen];
             buf.readBytes(nameBytes);
             int nameLen = 0;
             while (nameLen < nameBytes.length && nameBytes[nameLen] != 0) {
                 nameLen++;
             }
-            pd.setName(new String(nameBytes, 0, nameLen, StandardCharsets.UTF_8));
-            pd.setYourTelemetry(buf.readUnsignedByte());
-            pd.setShowOnlineNames(buf.readUnsignedByte());
-            pd.setTechLevel(buf.readUnsignedShortLE());
-            pd.setPlatform(buf.readUnsignedByte());
-            pd.setNumColours(buf.readUnsignedByte());
+            pd.setName(new String(nameBytes, 0, nameLen, StandardCharsets.UTF_8).trim());
 
-            // LiveryColour[4] - 3 bytes each (RGB)
-            short[][] colours = new short[4][3];
-            for (int c = 0; c < 4; c++) {
-                colours[c][0] = buf.readUnsignedByte(); // red
-                colours[c][1] = buf.readUnsignedByte(); // green
-                colours[c][2] = buf.readUnsignedByte(); // blue
+            if (buf.readableBytes() >= 1) pd.setYourTelemetry(buf.readUnsignedByte());
+            if (buf.readableBytes() >= 1) pd.setShowOnlineNames(buf.readUnsignedByte());
+            if (buf.readableBytes() >= 2) pd.setTechLevel(buf.readUnsignedShortLE());
+            if (buf.readableBytes() >= 1) pd.setPlatform(buf.readUnsignedByte());
+
+            // Livery colours (F1 25 specific: 1 byte numColours + 12 bytes RGB colours)
+            if (buf.readableBytes() >= 13) {
+                pd.setNumColours(buf.readUnsignedByte());
+                short[][] colours = new short[4][3];
+                for (int c = 0; c < 4; c++) {
+                    colours[c][0] = buf.readUnsignedByte(); // red
+                    colours[c][1] = buf.readUnsignedByte(); // green
+                    colours[c][2] = buf.readUnsignedByte(); // blue
+                }
+                pd.setLiveryColours(colours);
+            } else if (buf.readableBytes() >= 1) {
+                pd.setNumColours(buf.readUnsignedByte());
             }
-            pd.setLiveryColours(colours);
 
             packet.getParticipants()[i] = pd;
         }
@@ -585,5 +599,42 @@ public class PacketDeserializer {
         }
 
         return packet;
+    }
+
+    // ===== SESSION HISTORY (Packet ID: 11) =====
+
+    public PacketSessionHistoryData deserializeSessionHistory(PacketHeader header, ByteBuf buf) {
+        PacketSessionHistoryData p = new PacketSessionHistoryData();
+        p.setHeader(header);
+        p.setCarIdx(buf.readUnsignedByte());
+        p.setNumLaps(buf.readUnsignedByte());
+        p.setNumTyreStints(buf.readUnsignedByte());
+        p.setBestLapTimeLapNum(buf.readUnsignedByte());
+        p.setBestSector1LapNum(buf.readUnsignedByte());
+        p.setBestSector2LapNum(buf.readUnsignedByte());
+        p.setBestSector3LapNum(buf.readUnsignedByte());
+
+        for (int i = 0; i < 100; i++) {
+            LapHistoryData lap = new LapHistoryData();
+            lap.setLapTimeInMS(buf.readUnsignedIntLE());
+            lap.setSector1TimeMSPart(buf.readUnsignedShortLE());
+            lap.setSector1TimeMinutesPart(buf.readUnsignedByte());
+            lap.setSector2TimeMSPart(buf.readUnsignedShortLE());
+            lap.setSector2TimeMinutesPart(buf.readUnsignedByte());
+            lap.setSector3TimeMSPart(buf.readUnsignedShortLE());
+            lap.setSector3TimeMinutesPart(buf.readUnsignedByte());
+            lap.setLapValidBitFlags(buf.readUnsignedByte());
+            p.getLapHistoryData()[i] = lap;
+        }
+
+        for (int i = 0; i < 8; i++) {
+            TyreStintHistoryData stint = new TyreStintHistoryData();
+            stint.setEndLap(buf.readUnsignedByte());
+            stint.setTyreActualCompound(buf.readUnsignedByte());
+            stint.setTyreVisualCompound(buf.readUnsignedByte());
+            p.getTyreStintsHistoryData()[i] = stint;
+        }
+
+        return p;
     }
 }

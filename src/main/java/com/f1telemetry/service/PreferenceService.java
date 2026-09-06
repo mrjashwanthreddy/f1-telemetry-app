@@ -2,13 +2,17 @@ package com.f1telemetry.service;
 
 import com.f1telemetry.network.UdpServer;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.f1telemetry.domain.User;
+import com.f1telemetry.domain.RaceEngineer;
+import com.f1telemetry.domain.SimDriver;
 import com.f1telemetry.domain.UserPreference;
+import com.f1telemetry.repository.RaceEngineerRepository;
+import com.f1telemetry.repository.SimDriverRepository;
 import com.f1telemetry.repository.UserPreferenceRepository;
-import com.f1telemetry.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -16,7 +20,8 @@ import org.springframework.stereotype.Service;
 public class PreferenceService {
 
     private final UserPreferenceRepository preferenceRepository;
-    private final UserRepository userRepository;
+    private final SimDriverRepository simDriverRepository;
+    private final RaceEngineerRepository raceEngineerRepository;
     private final Cache<String, UserPreference> preferencesCache;
     private final UdpServer udpServer;
 
@@ -30,32 +35,45 @@ public class PreferenceService {
 
         log.debug("Preferences cache MISS for user '{}' — loading from DB", username);
 
-        // Fetch from DB
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    log.warn("Preferences lookup failed — user '{}' not found in DB", username);
-                    return new RuntimeException("User not found");
-                });
+        // Fetch driver first
+        Optional<SimDriver> driverOpt = simDriverRepository.findByUsername(username);
+        if (driverOpt.isPresent()) {
+            SimDriver driver = driverOpt.get();
+            UserPreference pref = preferenceRepository.findByDriver(driver)
+                    .orElseGet(() -> {
+                        log.info("Creating default preferences for new sim driver '{}'", username);
+                        UserPreference newPref = new UserPreference(driver);
+                        return preferenceRepository.save(newPref);
+                    });
 
-        UserPreference pref = preferenceRepository.findByUser(user)
-                .orElseGet(() -> {
-                    log.info("Creating default preferences for new user '{}'", username);
-                    UserPreference newPref = new UserPreference(user);
-                    return preferenceRepository.save(newPref);
-                });
+            preferencesCache.put(username, pref);
+            log.info("Loaded preferences for driver '{}' into Caffeine cache", username);
+            return pref;
+        }
 
-        // Load into cache
-        preferencesCache.put(username, pref);
-        log.info("Loaded preferences for '{}' into Caffeine cache", username);
-        return pref;
+        // If not driver, check if engineer has an assigned driver
+        Optional<RaceEngineer> engineerOpt = raceEngineerRepository.findByUsername(username);
+        if (engineerOpt.isPresent() && engineerOpt.get().getAssignedDriverId() != null) {
+            Optional<SimDriver> pairedDriverOpt = simDriverRepository.findById(engineerOpt.get().getAssignedDriverId());
+            if (pairedDriverOpt.isPresent()) {
+                SimDriver pairedDriver = pairedDriverOpt.get();
+                UserPreference pref = preferenceRepository.findByDriver(pairedDriver)
+                        .orElseGet(() -> preferenceRepository.save(new UserPreference(pairedDriver)));
+                return pref;
+            }
+        }
+
+        // Return a transient default preference if user is an unlinked engineer or guest
+        UserPreference transientPref = new UserPreference();
+        return transientPref;
     }
 
     public UserPreference updatePreferences(String username, UserPreference updateReq) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        SimDriver driver = simDriverRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Sim Driver not found: " + username));
 
-        UserPreference pref = preferenceRepository.findByUser(user)
-                .orElse(new UserPreference(user));
+        UserPreference pref = preferenceRepository.findByDriver(driver)
+                .orElse(new UserPreference(driver));
 
         pref.setTireOverheatTemp(updateReq.getTireOverheatTemp());
         pref.setBrakeOverheatTemp(updateReq.getBrakeOverheatTemp());

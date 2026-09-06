@@ -4,7 +4,7 @@ import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
-import com.f1telemetry.domain.User;
+import com.f1telemetry.domain.SimDriver;
 import com.f1telemetry.domain.UserPreference;
 import com.f1telemetry.service.ActiveUserService;
 import com.f1telemetry.service.PreferenceService;
@@ -110,7 +110,7 @@ public class GlobalHotkeyService implements NativeKeyListener {
     }
 
     private boolean isAiEnabled() {
-        User activeUser = activeUserService.getActiveUser();
+        SimDriver activeUser = activeUserService.getActiveUser();
         if (activeUser != null) {
             try {
                 UserPreference prefs = preferenceService.getPreferences(activeUser.getUsername());
@@ -123,7 +123,7 @@ public class GlobalHotkeyService implements NativeKeyListener {
     }
 
     private int getActiveVoiceHotkey() {
-        User activeUser = activeUserService.getActiveUser();
+        SimDriver activeUser = activeUserService.getActiveUser();
         if (activeUser != null) {
             try {
                 UserPreference prefs = preferenceService.getPreferences(activeUser.getUsername());
@@ -136,7 +136,7 @@ public class GlobalHotkeyService implements NativeKeyListener {
     }
 
     public void saveNewHotkeyPreference(int keyCode, String keyText) {
-        User activeUser = activeUserService.getActiveUser();
+        SimDriver activeUser = activeUserService.getActiveUser();
         if (activeUser == null) {
             log.warn("[GlobalHotkey] Cannot save key binding: No active driver logged in.");
             return;

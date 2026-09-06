@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
 @Table(name = "race_sessions")
 @Data
@@ -18,8 +15,8 @@ public class RaceSession {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "driver_id", nullable = false)
+    private SimDriver driver;
 
     @Column(nullable = false, unique = true)
     private String sessionId;
@@ -36,8 +33,8 @@ public class RaceSession {
     private long timestamp;
 
     /** Full constructor used by RuleEvaluationEngine. */
-    public RaceSession(User user, String sessionId, String trackName, String sessionType, long timestamp) {
-        this.user = user;
+    public RaceSession(SimDriver driver, String sessionId, String trackName, String sessionType, long timestamp) {
+        this.driver = driver;
         this.sessionId = sessionId;
         this.trackName = trackName;
         this.sessionType = sessionType;
