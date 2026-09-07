@@ -71,6 +71,53 @@ public class CarState {
     private int bestSector3TimeInMS;
     private short resultStatus;
 
+    // ── Car Setup (Packet ID 5) ──────────────────────────────────────────────
+    // NOTE: In online multiplayer, other human cars' setups come through as
+    // zeroes per F1 25 spec. Only own car + AI cars have real values.
+    private short setupFrontWing;               // Aero (0-50)
+    private short setupRearWing;                // Aero (0-50)
+    private short setupOnThrottle;              // Differential on-throttle %
+    private short setupOffThrottle;             // Differential off-throttle %
+    private float setupFrontCamber;             // Camber angle (degrees)
+    private float setupRearCamber;              // Camber angle (degrees)
+    private float setupFrontToe;                // Toe angle (degrees)
+    private float setupRearToe;                 // Toe angle (degrees)
+    private short setupFrontSuspension;         // Suspension stiffness
+    private short setupRearSuspension;          // Suspension stiffness
+    private short setupFrontAntiRollBar;        // ARB stiffness
+    private short setupRearAntiRollBar;         // ARB stiffness
+    private short setupFrontSuspensionHeight;   // Ride height
+    private short setupRearSuspensionHeight;    // Ride height
+    private short setupBrakePressure;           // Brake pressure %
+    private short setupBrakeBias;               // Brake bias %
+    private short setupEngineBraking;           // Engine braking %
+    private float setupRearLeftTyrePressure;    // PSI
+    private float setupRearRightTyrePressure;   // PSI
+    private float setupFrontLeftTyrePressure;   // PSI
+    private float setupFrontRightTyrePressure;  // PSI
+    private short setupBallast;                 // Ballast
+    private float setupFuelLoad;                // Fuel load at race start
+
+    // ── ERS Lap Accounting (from CarStatusData) ──────────────────────────────
+    private float ersDeployedThisLap;           // Joules deployed this lap
+    private float ersHarvestedThisLapMGUK;      // Joules harvested by MGU-K
+    private float ersHarvestedThisLapMGUH;      // Joules harvested by MGU-H
+
+    // ── Completed Lap History (from PacketSessionHistoryData) ────────────────
+    private java.util.List<CompletedLap> lapHistory = new java.util.ArrayList<>();
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
+    public static class CompletedLap {
+        private int lapNum;
+        private long lapTimeInMS;
+        private int sector1TimeInMS;
+        private int sector2TimeInMS;
+        private int sector3TimeInMS;
+        private boolean valid;
+    }
+
     public CarState(int index) {
         this.carIndex = index;
     }

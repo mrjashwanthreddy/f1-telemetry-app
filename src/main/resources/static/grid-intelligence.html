@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Intelligence — F1 Race Engineer Pit Wall</title>
+    <meta name="description" content="Live all-drivers telemetry dashboard — lap history, car setup, ERS, throttle/brake data for every car on track.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="/css/grid-intelligence.css?v=20260907_5">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         TOP COMMAND HEADER
+    ════════════════════════════════════════════════════════════════════════ -->
+    <header class="gi-header">
+
+        <!-- Brand -->
+        <div class="gi-brand">
+            <svg style="height:20px;width:auto;" viewBox="0 0 130 32" fill="#e10600">
+                <path d="M0 32h14.5l24.3-24.3c4.5-4.5 9.8-5.7 17.2-5.7h24.5l8-8H56c-10.2 0-18.4 2.8-24.7 9.1L0 32z"/>
+                <path d="M0 17.5h35.8l8-8H0v8z"/>
+                <path d="M102 0L70 32h18L120 0h-18z"/>
+            </svg>
+            <h1>Grid Intelligence</h1>
+            <span class="gi-badge">ALL DRIVERS</span>
+        </div>
+
+        <!-- Session Ribbon -->
+        <div class="gi-session-ribbon">
+            <div class="gi-ribbon-item">
+                <span class="gi-ribbon-label">Circuit</span>
+                <span id="gi-ribbon-track" class="gi-ribbon-value">Grand Prix</span>
+            </div>
+            <div class="gi-ribbon-item">
+                <span class="gi-ribbon-label">Conditions</span>
+                <span id="gi-ribbon-weather" class="gi-ribbon-value">Dry</span>
+            </div>
+            <div class="gi-ribbon-item">
+                <span class="gi-ribbon-label">Lap</span>
+                <span id="gi-ribbon-lap" class="gi-ribbon-value">— / —</span>
+            </div>
+            <div class="gi-ribbon-item">
+                <span class="gi-ribbon-label">Status</span>
+                <span id="gi-ribbon-status" class="status-pill track-clear">GREEN FLAG</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="gi-header-actions">
+            <a href="/engineer.html" class="gi-nav-btn" id="btn-back-pitwall">← PIT WALL</a>
+            <span id="gi-connection-badge" class="gi-connection-badge" style="background:rgba(245,158,11,0.12);color:#d97706;border-color:rgba(245,158,11,0.3);">CONNECTING...</span>
+            <button class="gi-logout-btn" onclick="giLogout()">LOGOUT</button>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MAIN WORKSPACE
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div class="gi-workspace">
+
+        <!-- ── LEFT: Driver Selector List ─────────────────────────────────── -->
+        <aside class="gi-driver-list-col">
+            <div class="gi-list-header">
+                <span class="gi-list-title">ON TRACK</span>
+                <span id="gi-active-count" class="gi-active-count">0 CARS</span>
+            </div>
+            <div id="gi-driver-rows" class="gi-driver-rows">
+                <div class="gi-waiting-notice" style="padding:30px 16px;text-align:center;color:#6b21a8;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;">
+                    WAITING FOR TELEMETRY...
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── RIGHT: Detail Panel ────────────────────────────────────────── -->
+        <main class="gi-main-panel" id="gi-main-panel">
+
+            <!-- Empty / prompt state -->
+            <div class="gi-empty-state" id="gi-empty-state">
+                <div class="gi-empty-icon">🏎️</div>
+                <div class="gi-empty-text">Select a driver from the list</div>
+                <div style="font-size:0.75rem;color:#6b21a8;font-weight:700;letter-spacing:0.3px;margin-top:4px;">Lap history, setup, ERS and strategy data will appear here</div>
+            </div>
+
+            <!-- Detail content (hidden until driver selected) -->
+            <div id="gi-detail-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+
+                <!-- Driver Strip Header -->
+                <div class="gi-detail-header" id="gi-detail-header">
+                    <div class="gi-detail-pos" id="gi-detail-pos">P1</div>
+                    <div>
+                        <div class="gi-detail-name" id="gi-detail-name">DRIVER NAME</div>
+                        <div class="gi-detail-team" id="gi-detail-team">TEAM</div>
+                    </div>
+                    <div class="gi-detail-quick-stats">
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Last Lap</span>
+                            <span id="gi-qs-lastlap" class="gi-quick-stat-val">—:——.———</span>
+                        </div>
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Best Lap</span>
+                            <span id="gi-qs-bestlap" class="gi-quick-stat-val" style="color:#059669;">—:——.———</span>
+                        </div>
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Gap to Leader</span>
+                            <span id="gi-qs-gap" class="gi-quick-stat-val">—</span>
+                        </div>
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Interval</span>
+                            <span id="gi-qs-interval" class="gi-quick-stat-val">—</span>
+                        </div>
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Tyre</span>
+                            <span id="gi-qs-tyre" class="gi-quick-stat-val">—</span>
+                        </div>
+                        <div class="gi-quick-stat">
+                            <span class="gi-quick-stat-label">Pit Stops</span>
+                            <span id="gi-qs-pits" class="gi-quick-stat-val">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scrollable Body -->
+                <div class="gi-detail-body" id="gi-detail-body">
+
+                    <!-- ══ ZONE A: Lap History Log ═════════════════════════ -->
+                    <div class="gi-panel">
+                        <div class="gi-panel-title">
+                            <span class="gi-panel-title-text">📋 Lap History Log</span>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <span style="font-size:0.6rem;color:#475569;font-weight:800;">🟢 BEST &nbsp; 🟣 PURPLE &nbsp; ❌ INVALID</span>
+                                <span id="gi-lap-count-badge" class="gi-panel-badge" style="background:rgba(124,58,237,0.12);color:#a78bfa;border-color:rgba(124,58,237,0.3);">0 LAPS</span>
+                            </div>
+                        </div>
+                        <div class="gi-panel-body" style="padding:0;">
+                            <div class="lap-history-table-wrap">
+                                <table class="lap-history-table" id="gi-lap-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align:left;">LAP</th>
+                                            <th>TOTAL TIME</th>
+                                            <th>SECTOR 1</th>
+                                            <th>SECTOR 2</th>
+                                            <th>SECTOR 3</th>
+                                            <th>COMPOUND</th>
+                                            <th>VALIDITY</th>
+                                            <th style="text-align:right;">FLAGS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="gi-lap-tbody">
+                                        <tr>
+                                            <td colspan="8" class="lap-history-empty">NO LAPS RECORDED YET — WAITING FOR LAP COMPLETION</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ══ ZONE B: Deep-Dive 3-Col Grid ═══════════════════ -->
+                    <div class="gi-deep-dive-grid">
+
+                        <!-- Column 1: Live Inputs & Telemetry Comparison -->
+                        <div class="gi-panel">
+                            <div class="gi-panel-title">
+                                <span class="gi-panel-title-text">⚡ Inputs & Comparison</span>
+                                <div id="gi-comp-badge" class="comp-badge">VS YOU</div>
+                            </div>
+                            <div class="gi-panel-body">
+
+                                <!-- Comparison Drivers Header -->
+                                <div class="comp-drivers-header">
+                                    <div class="comp-driver-legend">
+                                        <span class="legend-dot dot-selected"></span>
+                                        <span id="gi-legend-selected" class="legend-label">SELECTED</span>
+                                    </div>
+                                    <div class="comp-driver-legend">
+                                        <span class="legend-dot dot-ref"></span>
+                                        <span id="gi-legend-ref" class="legend-label">YOU</span>
+                                    </div>
+                                </div>
+
+                                <!-- Throttle Comparison -->
+                                <div class="comp-input-group">
+                                    <div class="comp-input-label-row">
+                                        <span class="live-input-label">THROTTLE</span>
+                                        <span id="gi-delta-thr" class="comp-delta-badge">Δ 0%</span>
+                                    </div>
+                                    <!-- Selected Driver Throttle -->
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag" id="gi-tag-thr-sel">SEL</span>
+                                        <div class="live-input-bar-track">
+                                            <div id="gi-thr-fill" class="live-input-bar-fill fill-throttle" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-thr-val" class="live-input-val val-throttle">0%</span>
+                                    </div>
+                                    <!-- Connected Driver Throttle -->
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag tag-ref" id="gi-tag-thr-ref">YOU</span>
+                                        <div class="live-input-bar-track">
+                                            <div id="gi-ref-thr-fill" class="live-input-bar-fill fill-ref-throttle" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-ref-thr-val" class="live-input-val val-ref">0%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Brake Comparison -->
+                                <div class="comp-input-group" style="margin-top:10px;">
+                                    <div class="comp-input-label-row">
+                                        <span class="live-input-label">BRAKE</span>
+                                        <span id="gi-delta-brk" class="comp-delta-badge">Δ 0%</span>
+                                    </div>
+                                    <!-- Selected Driver Brake -->
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag" id="gi-tag-brk-sel">SEL</span>
+                                        <div class="live-input-bar-track">
+                                            <div id="gi-brk-fill" class="live-input-bar-fill fill-brake" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-brk-val" class="live-input-val val-brake">0%</span>
+                                    </div>
+                                    <!-- Connected Driver Brake -->
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag tag-ref" id="gi-tag-brk-ref">YOU</span>
+                                        <div class="live-input-bar-track">
+                                            <div id="gi-ref-brk-fill" class="live-input-bar-fill fill-ref-brake" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-ref-brk-val" class="live-input-val val-ref">0%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Speed & Gear Comparison -->
+                                <div class="comp-speed-box" style="margin-top:10px;">
+                                    <div class="comp-speed-col">
+                                        <span class="comp-speed-label" id="gi-speed-sel-label">SELECTED</span>
+                                        <div class="comp-speed-val-wrap">
+                                            <span id="gi-speed-sel-val" class="comp-speed-digits">0</span>
+                                            <span class="comp-speed-unit">KM/H</span>
+                                            <span id="gi-gear-sel" class="comp-gear-pill">G0</span>
+                                        </div>
+                                    </div>
+                                    <div class="comp-speed-delta-wrap">
+                                        <span class="comp-speed-delta-label">SPEED GAP</span>
+                                        <span id="gi-delta-speed" class="comp-speed-delta-val">0 km/h</span>
+                                    </div>
+                                    <div class="comp-speed-col" style="text-align:right;">
+                                        <span class="comp-speed-label" id="gi-speed-ref-label">YOU</span>
+                                        <div class="comp-speed-val-wrap" style="justify-content:flex-end;">
+                                            <span id="gi-gear-ref" class="comp-gear-pill ref">G0</span>
+                                            <span id="gi-speed-ref-val" class="comp-speed-digits ref">0</span>
+                                            <span class="comp-speed-unit">KM/H</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ERS Store Comparison -->
+                                <div class="comp-input-group" style="margin-top:12px;">
+                                    <div class="comp-input-label-row">
+                                        <span class="ers-store-label">ERS STORE</span>
+                                        <span id="gi-delta-ers" class="comp-delta-badge">Δ 0%</span>
+                                    </div>
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag">SEL</span>
+                                        <div class="ers-store-bar-track">
+                                            <div id="gi-ers-fill" class="ers-store-bar-fill" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-ers-pct" class="ers-store-pct">0%</span>
+                                    </div>
+                                    <div class="comp-bar-row">
+                                        <span class="comp-car-tag tag-ref">YOU</span>
+                                        <div class="ers-store-bar-track">
+                                            <div id="gi-ref-ers-fill" class="ers-store-bar-fill fill-ref-ers" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-ref-ers-pct" class="ers-store-pct ref">0%</span>
+                                    </div>
+                                </div>
+
+                                <!-- ERS Deploy Mode & Energy Deployed -->
+                                <div class="comp-ers-grid" style="margin-top:10px;">
+                                    <div class="comp-ers-cell">
+                                        <div class="comp-ers-header">
+                                            <span class="comp-ers-title">DEPLOY MODE</span>
+                                        </div>
+                                        <div class="comp-ers-mode-row">
+                                            <span id="gi-ers-mode" class="ers-mode-badge mode-none" style="font-size:0.62rem;">SEL: NONE</span>
+                                            <span id="gi-ref-ers-mode" class="ers-mode-badge mode-ref" style="font-size:0.62rem;">YOU: NONE</span>
+                                        </div>
+                                    </div>
+                                    <div class="comp-ers-cell">
+                                        <div class="comp-ers-header">
+                                            <span class="comp-ers-title">DEPLOYED (LAP)</span>
+                                            <span id="gi-delta-dep" class="comp-delta-badge mini">Δ 0 MJ</span>
+                                        </div>
+                                        <div class="comp-ers-energy-row">
+                                            <span id="gi-deployed-val" class="comp-val-sel">0.00 MJ</span>
+                                            <span style="color:#6b21a8;font-weight:700;">vs</span>
+                                            <span id="gi-ref-deployed-val" class="comp-val-ref">0.00 MJ</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ERS Harvested MGU-K & MGU-H -->
+                                <div class="comp-harvest-row" style="margin-top:10px;">
+                                    <div class="comp-harvest-item">
+                                        <span class="comp-harvest-label">HARV. MGU-K</span>
+                                        <div class="comp-harvest-vals">
+                                            <span id="gi-mguk-val" class="comp-val-sel">0.00 MJ</span>
+                                            <span class="harvest-vs">vs</span>
+                                            <span id="gi-ref-mguk-val" class="comp-val-ref">0.00 MJ</span>
+                                        </div>
+                                    </div>
+                                    <div class="comp-harvest-item">
+                                        <span class="comp-harvest-label">HARV. MGU-H</span>
+                                        <div class="comp-harvest-vals">
+                                            <span id="gi-mguh-val" class="comp-val-sel">0.00 MJ</span>
+                                            <span class="harvest-vs">vs</span>
+                                            <span id="gi-ref-mguh-val" class="comp-val-ref">0.00 MJ</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Car Setup Panel -->
+                        <div class="gi-panel">
+                            <div class="gi-panel-title">
+                                <span class="gi-panel-title-text">🔧 Car Setup</span>
+                                <span id="gi-setup-freq-badge" class="gi-panel-badge" style="background:rgba(37,99,235,0.1);color:#2563eb;border-color:rgba(37,99,235,0.25);">2 Hz</span>
+                            </div>
+                            <div class="gi-panel-body" id="gi-setup-body">
+
+                                <!-- Restricted Banner (shown in MP) -->
+                                <div class="setup-restricted-banner" id="gi-setup-restricted" style="display:none;">
+                                    ⚠️ RESTRICTED — SOLO/CAREER ONLY &nbsp;·&nbsp; Other online drivers show zero values per F1 25 spec
+                                </div>
+
+                                <!-- AERO -->
+                                <div class="setup-section-title">AERODYNAMICS</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Front Wing</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-fw" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-fw-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Rear Wing</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-rw" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-rw-v" class="setup-field-val">0</span>
+                                </div>
+
+                                <!-- DIFFERENTIAL -->
+                                <div class="setup-section-title">DIFFERENTIAL</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">On Throttle</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-don" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-don-v" class="setup-field-val">0%</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Off Throttle</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-doff" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-doff-v" class="setup-field-val">0%</span>
+                                </div>
+
+                                <!-- SUSPENSION -->
+                                <div class="setup-section-title">SUSPENSION</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Front Susp.</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-fs" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-fs-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Rear Susp.</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-rs" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-rs-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Front ARB</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-farb" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-farb-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Rear ARB</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-rarb" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-rarb-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">F Ride Height</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-frh" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-frh-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">R Ride Height</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-rrh" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-rrh-v" class="setup-field-val">0</span>
+                                </div>
+
+                                <!-- GEOMETRY -->
+                                <div class="setup-section-title">GEOMETRY</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Front Camber</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-fca-v" class="setup-field-val">0.00°</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Rear Camber</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-rca-v" class="setup-field-val">0.00°</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Front Toe</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-fto-v" class="setup-field-val">0.00°</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Rear Toe</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-rto-v" class="setup-field-val">0.00°</span>
+                                </div>
+
+                                <!-- BRAKES -->
+                                <div class="setup-section-title">BRAKES</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Brake Pressure</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-bp" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-bp-v" class="setup-field-val">0%</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Brake Bias</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-bb" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-bb-v" class="setup-field-val">0%</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Engine Braking</span>
+                                    <div class="setup-field-bar-track"><div id="gi-s-eb" class="setup-field-bar-fill" style="width:0%"></div></div>
+                                    <span id="gi-s-eb-v" class="setup-field-val">0%</span>
+                                </div>
+
+                                <!-- TYRE PRESSURES -->
+                                <div class="setup-section-title">TYRE PRESSURES (PSI)</div>
+                                <div class="tyre-pressure-grid">
+                                    <div class="tyre-pressure-cell">
+                                        <div class="tyre-pressure-corner">FL</div>
+                                        <div id="gi-s-pfl" class="tyre-pressure-val">0.0</div>
+                                    </div>
+                                    <div class="tyre-pressure-cell">
+                                        <div class="tyre-pressure-corner">FR</div>
+                                        <div id="gi-s-pfr" class="tyre-pressure-val">0.0</div>
+                                    </div>
+                                    <div class="tyre-pressure-cell">
+                                        <div class="tyre-pressure-corner">RL</div>
+                                        <div id="gi-s-prl" class="tyre-pressure-val">0.0</div>
+                                    </div>
+                                    <div class="tyre-pressure-cell">
+                                        <div class="tyre-pressure-corner">RR</div>
+                                        <div id="gi-s-prr" class="tyre-pressure-val">0.0</div>
+                                    </div>
+                                </div>
+
+                                <!-- BALLAST & FUEL LOAD -->
+                                <div class="setup-section-title">BALANCE</div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Ballast</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-ball-v" class="setup-field-val">0</span>
+                                </div>
+                                <div class="setup-row">
+                                    <span class="setup-field-label">Fuel Load</span>
+                                    <div class="setup-field-bar-track" style="background:transparent;"></div>
+                                    <span id="gi-s-fuel-v" class="setup-field-val">0.0 kg</span>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Strategy & Status -->
+                        <div class="gi-panel">
+                            <div class="gi-panel-title">
+                                <span class="gi-panel-title-text">📊 Strategy & Status</span>
+                                <span style="font-size:0.6rem;color:#6b21a8;font-weight:800;">LIVE</span>
+                            </div>
+                            <div class="gi-panel-body">
+
+                                <!-- POSITION & TIMING -->
+                                <div class="strategy-section-title">RACE POSITION</div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Race Position</span>
+                                    <span id="gi-st-pos" class="strategy-stat-val">—</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Gap to Leader</span>
+                                    <span id="gi-st-gap" class="strategy-stat-val">—</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Interval (Ahead)</span>
+                                    <span id="gi-st-interval" class="strategy-stat-val">—</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">DRS</span>
+                                    <span id="gi-st-drs" class="strategy-stat-val"><span class="drs-badge drs-off">OFF</span></span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Current Lap</span>
+                                    <span id="gi-st-lapnum" class="strategy-stat-val">—</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Pit Stops</span>
+                                    <span id="gi-st-pits2" class="strategy-stat-val">0</span>
+                                </div>
+
+                                <!-- FUEL -->
+                                <div class="strategy-section-sep"></div>
+                                <div class="strategy-section-title">⛽ FUEL</div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">In Tank</span>
+                                    <span id="gi-st-fuel" class="strategy-stat-val" style="color:#f97316;">0.0 kg</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Est. Laps Remaining</span>
+                                    <span id="gi-st-fuellaps" class="strategy-stat-val">—</span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Delta</span>
+                                    <span id="gi-st-fueldelta" class="strategy-stat-val"><span class="fuel-delta-badge positive">+0.00 LAPS</span></span>
+                                </div>
+
+                                <!-- TYRE -->
+                                <div class="strategy-section-sep"></div>
+                                <div class="strategy-section-title">🏎️ TYRES</div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Compound</span>
+                                    <span id="gi-st-compound" class="strategy-stat-val"><span class="compound-badge medium">MEDIUM</span></span>
+                                </div>
+                                <div class="strategy-stat-row">
+                                    <span class="strategy-stat-label">Age (Laps)</span>
+                                    <span id="gi-st-tyreage" class="strategy-stat-val">0</span>
+                                </div>
+
+                                <!-- Tyre Wear per corner -->
+                                <div class="tyre-wear-grid" style="margin-bottom:10px;">
+                                    <div class="tyre-wear-cell">
+                                        <div class="tyre-wear-header">
+                                            <span class="tyre-wear-corner">FL</span>
+                                            <span id="gi-wear-fl" class="tyre-wear-pct">0%</span>
+                                        </div>
+                                        <div class="tyre-wear-bar-track"><div id="gi-wf-fl" class="tyre-wear-bar-fill" style="width:0%;background:#22c55e;"></div></div>
+                                    </div>
+                                    <div class="tyre-wear-cell">
+                                        <div class="tyre-wear-header">
+                                            <span class="tyre-wear-corner">FR</span>
+                                            <span id="gi-wear-fr" class="tyre-wear-pct">0%</span>
+                                        </div>
+                                        <div class="tyre-wear-bar-track"><div id="gi-wf-fr" class="tyre-wear-bar-fill" style="width:0%;background:#22c55e;"></div></div>
+                                    </div>
+                                    <div class="tyre-wear-cell">
+                                        <div class="tyre-wear-header">
+                                            <span class="tyre-wear-corner">RL</span>
+                                            <span id="gi-wear-rl" class="tyre-wear-pct">0%</span>
+                                        </div>
+                                        <div class="tyre-wear-bar-track"><div id="gi-wf-rl" class="tyre-wear-bar-fill" style="width:0%;background:#22c55e;"></div></div>
+                                    </div>
+                                    <div class="tyre-wear-cell">
+                                        <div class="tyre-wear-header">
+                                            <span class="tyre-wear-corner">RR</span>
+                                            <span id="gi-wear-rr" class="tyre-wear-pct">0%</span>
+                                        </div>
+                                        <div class="tyre-wear-bar-track"><div id="gi-wf-rr" class="tyre-wear-bar-fill" style="width:0%;background:#22c55e;"></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- SECTOR SPLITS -->
+                                <div class="strategy-section-sep"></div>
+                                <div class="strategy-section-title">⏱️ SECTOR SPLITS — LAST LAP</div>
+                                <div class="sector-splits-mini">
+                                    <div class="sector-split-cell">
+                                        <div class="sector-split-label">S1</div>
+                                        <div id="gi-spl-s1" class="sector-split-val">—</div>
+                                    </div>
+                                    <div class="sector-split-cell">
+                                        <div class="sector-split-label">S2</div>
+                                        <div id="gi-spl-s2" class="sector-split-val">—</div>
+                                    </div>
+                                    <div class="sector-split-cell">
+                                        <div class="sector-split-label">S3</div>
+                                        <div id="gi-spl-s3" class="sector-split-val">—</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div><!-- end gi-deep-dive-grid -->
+
+                </div><!-- end gi-detail-body -->
+            </div><!-- end gi-detail-content -->
+
+        </main><!-- end gi-main-panel -->
+
+    </div><!-- end gi-workspace -->
+
+    <script src="/js/grid-intelligence.js?v=20260907_6"></script>
+</body>
+</html>

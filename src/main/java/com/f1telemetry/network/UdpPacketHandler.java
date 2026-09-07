@@ -111,6 +111,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             case PacketLapData p -> p.getHeader();
             case PacketCarStatusData p -> p.getHeader();
             case PacketCarDamageData p -> p.getHeader();
+            case PacketCarSetupData p -> p.getHeader();
             case PacketSessionData p -> p.getHeader();
             case PacketMotionData p -> p.getHeader();
             case PacketEventData p -> p.getHeader();
@@ -126,6 +127,7 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
             case PacketLapData p -> (short) PacketLapData.PACKET_ID;
             case PacketCarStatusData p -> (short) PacketCarStatusData.PACKET_ID;
             case PacketCarDamageData p -> (short) PacketCarDamageData.PACKET_ID;
+            case PacketCarSetupData p -> (short) PacketCarSetupData.PACKET_ID;
             case PacketSessionData p -> (short) PacketSessionData.PACKET_ID;
             case PacketMotionData p -> (short) PacketMotionData.PACKET_ID;
             case PacketEventData p -> (short) PacketEventData.PACKET_ID;
@@ -238,6 +240,42 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     state.setDrsAllowed(cs.getDrsAllowed());
                     state.setVisualTyreCompound(cs.getVisualTyreCompound());
                     state.setTyresAgeLaps(cs.getTyresAgeLaps());
+                    // ERS lap accounting (for Grid Intelligence dashboard)
+                    state.setErsDeployedThisLap(cs.getErsDeployedThisLap());
+                    state.setErsHarvestedThisLapMGUK(cs.getErsHarvestedThisLapMGUK());
+                    state.setErsHarvestedThisLapMGUH(cs.getErsHarvestedThisLapMGUH());
+                }
+            }
+            case PacketCarSetupData setup -> {
+                // Wire car setup data into CarState for Grid Intelligence dashboard.
+                // In online MP, other human cars come through as zeroes per F1 25 spec.
+                for (int i = 0; i < 22; i++) {
+                    com.f1telemetry.packets.CarSetupData cs = setup.getCarSetups()[i];
+                    if (cs == null) continue;
+                    CarState state = liveSessionState.getCars()[i];
+                    state.setSetupFrontWing(cs.getFrontWing());
+                    state.setSetupRearWing(cs.getRearWing());
+                    state.setSetupOnThrottle(cs.getOnThrottle());
+                    state.setSetupOffThrottle(cs.getOffThrottle());
+                    state.setSetupFrontCamber(cs.getFrontCamber());
+                    state.setSetupRearCamber(cs.getRearCamber());
+                    state.setSetupFrontToe(cs.getFrontToe());
+                    state.setSetupRearToe(cs.getRearToe());
+                    state.setSetupFrontSuspension(cs.getFrontSuspension());
+                    state.setSetupRearSuspension(cs.getRearSuspension());
+                    state.setSetupFrontAntiRollBar(cs.getFrontAntiRollBar());
+                    state.setSetupRearAntiRollBar(cs.getRearAntiRollBar());
+                    state.setSetupFrontSuspensionHeight(cs.getFrontSuspensionHeight());
+                    state.setSetupRearSuspensionHeight(cs.getRearSuspensionHeight());
+                    state.setSetupBrakePressure(cs.getBrakePressure());
+                    state.setSetupBrakeBias(cs.getBrakeBias());
+                    state.setSetupEngineBraking(cs.getEngineBraking());
+                    state.setSetupRearLeftTyrePressure(cs.getRearLeftTyrePressure());
+                    state.setSetupRearRightTyrePressure(cs.getRearRightTyrePressure());
+                    state.setSetupFrontLeftTyrePressure(cs.getFrontLeftTyrePressure());
+                    state.setSetupFrontRightTyrePressure(cs.getFrontRightTyrePressure());
+                    state.setSetupBallast(cs.getBallast());
+                    state.setSetupFuelLoad(cs.getFuelLoad());
                 }
             }
             case PacketCarDamageData damage -> {
@@ -344,23 +382,42 @@ public class UdpPacketHandler extends SimpleChannelInboundHandler<DatagramPacket
                     }
 
                     int numLaps = history.getNumLaps();
-                    if (numLaps > 1) {
-                        int lastCompletedIdx = numLaps - 2;
-                        if (lastCompletedIdx >= 0 && lastCompletedIdx < 100 && laps[lastCompletedIdx] != null) {
-                            LapHistoryData lastLap = laps[lastCompletedIdx];
-                            if (lastLap.getLapTimeInMS() > 0) {
-                                car.setLastLapTimeInMS(lastLap.getLapTimeInMS());
-                            }
-                            if (lastLap.getSector1TimeInMS() > 0) {
-                                car.setLastLapSector1TimeInMS(lastLap.getSector1TimeInMS());
-                            }
-                            if (lastLap.getSector2TimeInMS() > 0) {
-                                car.setLastLapSector2TimeInMS(lastLap.getSector2TimeInMS());
-                            }
-                            if (lastLap.getSector3TimeInMS() > 0) {
-                                car.setLastLapSector3TimeInMS(lastLap.getSector3TimeInMS());
-                            }
+                    java.util.List<CarState.CompletedLap> historyList = new java.util.ArrayList<>();
+                    LapHistoryData mostRecentCompleted = null;
+
+                    for (int l = 0; l < numLaps && l < 100; l++) {
+                        LapHistoryData lData = laps[l];
+                        if (lData != null && lData.getLapTimeInMS() > 0) {
+                            mostRecentCompleted = lData;
+                            boolean valid = (lData.getLapValidBitFlags() & 0x01) != 0;
+                            historyList.add(new CarState.CompletedLap(
+                                l + 1,
+                                lData.getLapTimeInMS(),
+                                lData.getSector1TimeInMS(),
+                                lData.getSector2TimeInMS(),
+                                lData.getSector3TimeInMS(),
+                                valid
+                            ));
                         }
+                    }
+
+                    if (mostRecentCompleted != null) {
+                        if (mostRecentCompleted.getLapTimeInMS() > 0) {
+                            car.setLastLapTimeInMS(mostRecentCompleted.getLapTimeInMS());
+                        }
+                        if (mostRecentCompleted.getSector1TimeInMS() > 0) {
+                            car.setLastLapSector1TimeInMS(mostRecentCompleted.getSector1TimeInMS());
+                        }
+                        if (mostRecentCompleted.getSector2TimeInMS() > 0) {
+                            car.setLastLapSector2TimeInMS(mostRecentCompleted.getSector2TimeInMS());
+                        }
+                        if (mostRecentCompleted.getSector3TimeInMS() > 0) {
+                            car.setLastLapSector3TimeInMS(mostRecentCompleted.getSector3TimeInMS());
+                        }
+                    }
+
+                    if (!historyList.isEmpty()) {
+                        car.setLapHistory(historyList);
                     }
                 }
             }
