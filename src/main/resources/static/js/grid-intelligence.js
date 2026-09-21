@@ -276,7 +276,14 @@ function giAnimationStep(timestamp) {
         giLastDeepDiveRender = timestamp;
         giUpdateSessionRibbon(giLastData);
         if (giSelectedCar >= 0 && giLastData.cars && giLastData.cars[giSelectedCar]) {
-            giRenderDetailPanel(giSelectedCar, giLastData.cars[giSelectedCar], giLastData);
+            // Only render analysis panel if that tab is active
+            if (giActiveBattleTab === 'analysis') {
+                giRenderDetailPanel(giSelectedCar, giLastData.cars[giSelectedCar], giLastData);
+            }
+            // Battle mode rendering when battle tab is active
+            if (giActiveBattleTab === 'battle') {
+                giRenderBattleMode(giLastData);
+            }
         }
     }
 
@@ -284,6 +291,10 @@ function giAnimationStep(timestamp) {
     if (timestamp - giLastDriverListRender >= 250) {
         giLastDriverListRender = timestamp;
         giRenderDriverList(giLastData);
+        // Also refresh rival dropdown if battle tab is open
+        if (giActiveBattleTab === 'battle') {
+            giUpdateRivalDropdown(giLastData);
+        }
     }
 }
 
@@ -954,6 +965,783 @@ function giLogout() {
     window.location.href = '/index.html';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  BATTLE MODE — Race Engineer Comparison Engine
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Battle State ─────────────────────────────────────────────────────────────
+
+let giBattleRivalIdx      = -1;
+let giActiveBattleTab     = 'analysis'; // 'analysis' | 'battle'
+let giInsightLastUpdate   = 0;
+
+/**
+ * Per-lap sector history for all 22 cars.
+ * giBattleLapData[carIdx] = [{lapNum, s1MS, s2MS, s3MS, totalMS, compound}]
+ */
+const giBattleLapData = Array.from({length: 22}, () => []);
+
+/**
+ * Gap history between my car and rival over last laps.
+ * giBattleGapHistory = [{lapNum, gapMs, isLeading}]
+ */
+let giBattleGapHistory = [];
+
+// ── Tab Switcher ──────────────────────────────────────────────────────────────
+
+function giSwitchTab(tab) {
+    giActiveBattleTab = tab;
+
+    const analysisBtn = document.getElementById('gi-tab-analysis-btn');
+    const battleBtn   = document.getElementById('gi-tab-battle-btn');
+    const analysisTab = document.getElementById('gi-tab-analysis');
+    const battleTab   = document.getElementById('gi-tab-battle');
+    const rivalInfo   = document.getElementById('gi-battle-rival-info');
+
+    if (analysisBtn) analysisBtn.classList.toggle('active', tab === 'analysis');
+    if (battleBtn)   battleBtn.classList.toggle('active', tab === 'battle');
+
+    if (analysisTab) {
+        analysisTab.classList.toggle('gi-tab-content-active', tab === 'analysis');
+        analysisTab.style.display = tab === 'analysis' ? 'flex' : 'none';
+    }
+    if (battleTab) {
+        battleTab.classList.toggle('gi-tab-content-active', tab === 'battle');
+        battleTab.style.display = tab === 'battle' ? 'flex' : 'none';
+    }
+
+    if (rivalInfo) rivalInfo.style.display = tab === 'battle' && giBattleRivalIdx >= 0 ? 'flex' : 'none';
+
+    if (tab === 'battle' && giLastData) {
+        giUpdateRivalDropdown(giLastData);
+        if (giBattleRivalIdx < 0) giAutoSelectRival(giLastData);
+        giRenderBattleMode(giLastData);
+    }
+}
+
+// ── Rival Dropdown Population ─────────────────────────────────────────────────
+
+function giUpdateRivalDropdown(data) {
+    const sel = document.getElementById('gi-rival-select');
+    if (!sel || !data || !data.cars) return;
+
+    const myIdx  = giGetConnectedDriverIdx(data);
+    const cars   = data.cars;
+
+    const activeCars = [];
+    for (let i = 0; i < 22; i++) {
+        const car = cars[i];
+        if (!car || i === myIdx) continue;
+        if (car.position > 0 && car.position <= 22) {
+            activeCars.push({ idx: i, car });
+        }
+    }
+    activeCars.sort((a, b) => (a.car.position || 99) - (b.car.position || 99));
+
+    // Rebuild options only if count changed
+    const expectedCount = activeCars.length + 1; // +1 for placeholder
+    if (sel.options.length === expectedCount) return;
+
+    sel.innerHTML = '<option value="-1">— SELECT RIVAL —</option>';
+    activeCars.forEach(({idx, car}) => {
+        const name = (car.name || `DRIVER ${idx+1}`).toUpperCase();
+        const pos  = `P${car.position || '?'}`;
+        const opt  = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${pos} ${name}`;
+        if (idx === giBattleRivalIdx) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+/**
+ * Auto-select the car directly in front of my driver as the default rival.
+ */
+function giAutoSelectRival(data) {
+    if (!data || !data.cars) return;
+    const myIdx  = giGetConnectedDriverIdx(data);
+    const myCar  = data.cars[myIdx];
+    if (!myCar) return;
+
+    const myPos = myCar.position ?? 99;
+    if (myPos <= 1) {
+        // I am leader — rival is P2
+        const p2Idx = data.cars.findIndex((c, i) => c && i !== myIdx && c.position === 2);
+        if (p2Idx >= 0) { giSetBattleRival(p2Idx); return; }
+    } else {
+        // rival is car directly ahead (myPos - 1)
+        const aheadIdx = data.cars.findIndex((c, i) => c && i !== myIdx && c.position === myPos - 1);
+        if (aheadIdx >= 0) { giSetBattleRival(aheadIdx); return; }
+    }
+}
+
+function giSetBattleRival(carIdx) {
+    giBattleRivalIdx = carIdx;
+    giBattleGapHistory = []; // Reset gap history when rival changes
+
+    // Update badge in tab bar
+    const badge = document.getElementById('gi-battle-rival-name-badge');
+    const info  = document.getElementById('gi-battle-rival-info');
+    if (giLastData && giLastData.cars && giLastData.cars[carIdx]) {
+        const name = (giLastData.cars[carIdx].name || `DRIVER ${carIdx+1}`).toUpperCase();
+        if (badge) badge.textContent = name;
+        if (info)  info.style.display = giActiveBattleTab === 'battle' ? 'flex' : 'none';
+    }
+
+    // Sync dropdown
+    const sel = document.getElementById('gi-rival-select');
+    if (sel) sel.value = carIdx;
+
+    // Immediately re-render
+    if (giLastData) giRenderBattleMode(giLastData);
+}
+
+// ── Lap Data Accumulation for Battle (sector history per car) ─────────────────
+
+function giAccumulateBattleLapData(carIdx, car) {
+    if (!car) return;
+    const newLap = car.currentLapNum ?? 0;
+    const store  = giBattleLapData[carIdx];
+
+    // Avoid duplicates
+    if (newLap > 1 && store.length === 0 && car.lastLapTimeInMS > 0) {
+        const prevLap = Math.max(1, newLap - 1);
+        if (!store.some(l => l.lapNum === prevLap)) {
+            store.push({
+                lapNum: prevLap,
+                totalMS: car.lastLapTimeInMS ?? 0,
+                s1MS: car.lastLapSector1TimeInMS ?? 0,
+                s2MS: car.lastLapSector2TimeInMS ?? 0,
+                s3MS: car.lastLapSector3TimeInMS ?? 0,
+                compound: car.visualTyreCompound ?? 17
+            });
+        }
+    }
+}
+
+// ── Master Battle Mode Render ─────────────────────────────────────────────────
+
+function giRenderBattleMode(data) {
+    if (!data || !data.cars) return;
+
+    const myIdx    = giGetConnectedDriverIdx(data);
+    const myCar    = data.cars[myIdx];
+    const rivalIdx = giBattleRivalIdx;
+    const rivalCar = rivalIdx >= 0 ? data.cars[rivalIdx] : null;
+
+    // Update MY DRIVER card
+    if (myCar) {
+        const myName = (myCar.name || 'MY DRIVER').toUpperCase();
+        const myPos  = `P${myCar.position || '?'}`;
+        const myNameEl = document.getElementById('gi-battle-my-name');
+        const myPosEl  = document.getElementById('gi-battle-my-pos');
+        if (myNameEl) myNameEl.textContent = myName;
+        if (myPosEl)  myPosEl.textContent  = myPos;
+    }
+
+    // Update RIVAL card
+    if (rivalCar) {
+        const rivalName = (rivalCar.name || `RIVAL ${rivalIdx+1}`).toUpperCase();
+        const rivalPos  = `P${rivalCar.position || '?'}`;
+        const rnEl = document.getElementById('gi-battle-rival-name');
+        const rpEl = document.getElementById('gi-battle-rival-pos');
+        if (rnEl) rnEl.textContent = rivalName;
+        if (rpEl) rpEl.textContent = rivalPos;
+    }
+
+    // Render sub-sections
+    giRenderBattleGapTrend(myIdx, rivalIdx, data);
+    giRenderLapDeltaTrend(myIdx, rivalIdx);
+    giRenderSectorComparison(myCar, rivalCar, myIdx, rivalIdx);
+    giRenderBattleERSPanel(myCar, rivalCar);
+
+    // Insights: throttled to every 3 seconds
+    const now = Date.now();
+    if (now - giInsightLastUpdate > 3000 && myCar && rivalCar) {
+        giInsightLastUpdate = now;
+        giGenerateInsights(myCar, rivalCar, myIdx, rivalIdx, data);
+    }
+}
+
+// ── Gap Trend (live interval) ─────────────────────────────────────────────────
+
+function giRenderBattleGapTrend(myIdx, rivalIdx, data) {
+    if (rivalIdx < 0 || !data.cars) return;
+
+    const myCar    = data.cars[myIdx];
+    const rivalCar = data.cars[rivalIdx];
+    if (!myCar || !rivalCar) return;
+
+    const gapValEl      = document.getElementById('gi-battle-gap-val');
+    const gapArrowEl    = document.getElementById('gi-battle-gap-arrow');
+    const gapTxtEl      = document.getElementById('gi-battle-gap-trend-txt');
+    const gapSublabelEl = document.getElementById('gi-battle-gap-sublabel');
+
+    const myPos     = myCar.position    ?? 99;
+    const rivalPos  = rivalCar.position ?? 99;
+    const isLeading = myPos < rivalPos;
+
+    // Calculate absolute gap between the two cars in milliseconds
+    let gapMs = 0;
+    if (myPos === rivalPos) {
+        gapMs = 0;
+    } else {
+        const myLeadDelta = myCar.deltaToLeaderInMS    ?? 0;
+        const rvLeadDelta = rivalCar.deltaToLeaderInMS ?? 0;
+
+        if (myLeadDelta > 0 || rvLeadDelta > 0) {
+            gapMs = Math.abs(myLeadDelta - rvLeadDelta);
+        } else {
+            // Fallback to deltaToCarInFront
+            gapMs = rivalPos > myPos
+                ? (rivalCar.deltaToCarInFrontInMS ?? 0)
+                : (myCar.deltaToCarInFrontInMS ?? 0);
+        }
+    }
+
+    const gapSec = gapMs / 1000;
+
+    // Display formatted gap with clear situational context
+    let gapStr = '—';
+    if (gapMs > 0) {
+        if (isLeading) {
+            gapStr = `+${gapSec.toFixed(3)}s LEAD`;
+        } else {
+            gapStr = `+${gapSec.toFixed(3)}s BEHIND`;
+        }
+    } else if (myPos === rivalPos) {
+        gapStr = '0.000s TIED';
+    }
+
+    if (gapSublabelEl) {
+        gapSublabelEl.textContent = isLeading ? 'LEAD OVER RIVAL' : 'INTERVAL TO RIVAL';
+    }
+
+    // Record gap history per-lap (store gap as positive distance)
+    const myLap = myCar.currentLapNum ?? 0;
+    if (giBattleGapHistory.length === 0 || giBattleGapHistory[giBattleGapHistory.length - 1].lapNum !== myLap) {
+        if (gapMs > 0) {
+            giBattleGapHistory.push({ lapNum: myLap, gapMs: gapMs, isLeading: isLeading });
+            if (giBattleGapHistory.length > 10) giBattleGapHistory.shift();
+        }
+    }
+
+    // Trend: compare earliest vs latest gap entries (last 3 laps)
+    let trendClass = '';
+    let trendTxt   = 'STABLE';
+    let arrowChar  = '→';
+
+    if (giBattleGapHistory.length >= 2) {
+        const first = giBattleGapHistory[Math.max(0, giBattleGapHistory.length - 3)];
+        const last  = giBattleGapHistory[giBattleGapHistory.length - 1];
+        const gapChange = last.gapMs - first.gapMs; // > 0 means distance between cars grew
+
+        if (isLeading) {
+            // My driver is ahead (e.g. Hamilton P1 vs Russell P2)
+            if (gapChange > 200) {
+                // Gap grew: we are pulling away!
+                trendClass = 'closing'; // green color in CSS
+                trendTxt   = 'PULLING AWAY';
+                arrowChar  = '▲';
+            } else if (gapChange < -200) {
+                // Gap shrunk: rival is closing in on us!
+                trendClass = 'opening'; // red warning color in CSS
+                trendTxt   = 'RIVAL CLOSING';
+                arrowChar  = '▼';
+            } else {
+                trendTxt   = 'STABLE LEAD';
+            }
+        } else {
+            // My driver is behind (chasing rival ahead)
+            if (gapChange < -200) {
+                // Gap shrunk: we are closing in on the rival ahead!
+                trendClass = 'closing'; // green color in CSS
+                trendTxt   = 'CLOSING IN';
+                arrowChar  = '▲';
+            } else if (gapChange > 200) {
+                // Gap grew: rival ahead is pulling away!
+                trendClass = 'opening'; // red warning color in CSS
+                trendTxt   = 'GAP OPENING';
+                arrowChar  = '▼';
+            } else {
+                trendTxt   = 'STABLE GAP';
+            }
+        }
+    }
+
+    if (gapValEl)  gapValEl.textContent  = gapStr;
+    if (gapArrowEl) {
+        gapArrowEl.textContent = arrowChar;
+        gapArrowEl.className   = `gi-battle-gap-arrow ${trendClass}`;
+    }
+    if (gapTxtEl) {
+        gapTxtEl.textContent = trendTxt;
+        gapTxtEl.className   = `gi-battle-gap-trend-txt ${trendClass}`;
+    }
+}
+
+// ── Lap Delta Trend Cells ─────────────────────────────────────────────────────
+
+function giRenderLapDeltaTrend(myIdx, rivalIdx) {
+    const container = document.getElementById('gi-battle-trend-cells');
+    if (!container) return;
+
+    const myLaps    = lapHistoryStore[myIdx]    || [];
+    const rivalLaps = lapHistoryStore[rivalIdx] || [];
+
+    if (rivalIdx < 0 || myLaps.length === 0 || rivalLaps.length === 0) {
+        container.innerHTML = '<div class="gi-trend-empty">SELECT A RIVAL — WAITING FOR LAP DATA</div>';
+        return;
+    }
+
+    // Match laps by lapNum, compute deltas for last 5 matching laps
+    const deltas = [];
+    const myMap = Object.fromEntries(myLaps.filter(l => l.valid && l.totalMS > 0).map(l => [l.lapNum, l.totalMS]));
+    const rvMap = Object.fromEntries(rivalLaps.filter(l => l.valid && l.totalMS > 0).map(l => [l.lapNum, l.totalMS]));
+
+    const sharedLaps = Object.keys(myMap).filter(k => rvMap[k]).map(Number).sort((a,b) => a-b);
+    const last5 = sharedLaps.slice(-5);
+
+    if (last5.length === 0) {
+        container.innerHTML = '<div class="gi-trend-empty">WAITING FOR SHARED LAP DATA...</div>';
+        return;
+    }
+
+    // Max delta for normalizing bar heights
+    const rawDeltas = last5.map(lap => myMap[lap] - rvMap[lap]);
+    const maxAbs = Math.max(1, ...rawDeltas.map(d => Math.abs(d)));
+
+    const cells = last5.map((lapNum, i) => {
+        const delta   = rawDeltas[i];
+        const pct     = Math.min(100, Math.round(Math.abs(delta) / maxAbs * 100));
+        const cls     = delta < 0 ? 'gain' : (delta > 0 ? 'loss' : 'even');
+        const sign    = delta < 0 ? '▲' : (delta > 0 ? '▼' : '—');
+        const deltaS  = delta === 0 ? '±0.000' : `${delta < 0 ? '' : '+'}${(delta/1000).toFixed(3)}s`;
+
+        return `
+        <div class="gi-trend-cell">
+            <div class="gi-trend-cell-label">L${lapNum}</div>
+            <div class="gi-trend-cell-bar-wrap">
+                <div class="gi-trend-cell-bar-fill ${cls}" style="height:${pct}%"></div>
+            </div>
+            <div class="gi-trend-cell-delta ${cls}">${sign} ${Math.abs(delta/1000).toFixed(3)}s</div>
+        </div>`;
+    });
+
+    container.innerHTML = cells.join('');
+}
+
+// ── Sector Comparison ─────────────────────────────────────────────────────────
+
+function giRenderSectorComparison(myCar, rivalCar, myIdx, rivalIdx) {
+    if (!myCar) return;
+
+    const sectors = ['s1', 's2', 's3'];
+    const myFields = [
+        myCar.lastLapSector1TimeInMS ?? 0,
+        myCar.lastLapSector2TimeInMS ?? 0,
+        myCar.lastLapSector3TimeInMS ?? 0
+    ];
+    const rvFields = rivalCar ? [
+        rivalCar.lastLapSector1TimeInMS ?? 0,
+        rivalCar.lastLapSector2TimeInMS ?? 0,
+        rivalCar.lastLapSector3TimeInMS ?? 0
+    ] : [0, 0, 0];
+
+    sectors.forEach((s, i) => {
+        const myMs   = myFields[i];
+        const rvMs   = rvFields[i];
+        const delta  = myMs > 0 && rvMs > 0 ? myMs - rvMs : null;
+
+        const myEl    = document.getElementById(`gi-bs-my-${s}`);
+        const rvEl    = document.getElementById(`gi-bs-rival-${s}`);
+        const delEl   = document.getElementById(`gi-bs-delta-${s}`);
+        const barEl   = document.getElementById(`gi-bs-bar-${s}`);
+        const trendEl = document.getElementById(`gi-bs-trend-${s}`);
+        const cellEl  = document.getElementById(`gi-bs-${s}`);
+
+        if (myEl) myEl.textContent = myMs > 0 ? (myMs/1000).toFixed(3) : '—';
+        if (rvEl) rvEl.textContent = rvMs > 0 ? (rvMs/1000).toFixed(3) : '—';
+
+        if (delta !== null) {
+            const sign  = delta < 0 ? '▲ ' : (delta > 0 ? '▼ ' : '');
+            const abs   = Math.abs(delta/1000).toFixed(3);
+            const cls   = delta < 0 ? 'gain' : (delta > 0 ? 'loss' : 'even');
+
+            if (delEl) {
+                delEl.textContent = `${sign}${abs}s`;
+                delEl.className   = `gi-bs-delta ${cls}`;
+            }
+
+            // Bar shows proportional gain/loss (capped at 1s = 100%)
+            const barPct = Math.min(100, Math.abs(delta) / 1000 * 100);
+            if (barEl) {
+                barEl.style.width      = `${barPct}%`;
+                barEl.style.background = delta < 0
+                    ? 'linear-gradient(90deg, #10b981, #059669)'
+                    : 'linear-gradient(90deg, #ef4444, #dc2626)';
+                barEl.style.left = delta < 0 ? '0' : 'auto';
+                barEl.style.right = delta < 0 ? 'auto' : '0';
+            }
+
+            if (cellEl) {
+                cellEl.classList.toggle('gaining', delta < 0);
+                cellEl.classList.toggle('losing',  delta > 0);
+            }
+
+            // Sector trend from last 3 matching laps
+            if (trendEl) {
+                const trend = giComputeSectorTrend(myIdx, rivalIdx, i);
+                trendEl.textContent  = trend.text;
+                trendEl.style.color  = trend.color;
+            }
+        } else {
+            if (delEl)  { delEl.textContent = 'Δ —'; delEl.className = 'gi-bs-delta even'; }
+            if (barEl)  { barEl.style.width = '0%'; }
+            if (trendEl){ trendEl.textContent = '—'; trendEl.style.color = '#94a3b8'; }
+            if (cellEl) { cellEl.classList.remove('gaining', 'losing'); }
+        }
+    });
+}
+
+/**
+ * Compute sector trend over last 3 laps (is my driver gaining or losing this sector?)
+ * Returns {text, color}
+ */
+function giComputeSectorTrend(myIdx, rivalIdx, sectorIdx) {
+    const myLaps    = lapHistoryStore[myIdx]    || [];
+    const rivalLaps = lapHistoryStore[rivalIdx] || [];
+
+    const sFields = ['s1MS', 's2MS', 's3MS'];
+    const field   = sFields[sectorIdx];
+
+    const myMap = Object.fromEntries(myLaps.filter(l => l.valid && l[field] > 0).map(l => [l.lapNum, l[field]]));
+    const rvMap = Object.fromEntries(rivalLaps.filter(l => l.valid && l[field] > 0).map(l => [l.lapNum, l[field]]));
+
+    const shared = Object.keys(myMap).filter(k => rvMap[k]).map(Number).sort((a,b) => a-b).slice(-3);
+    if (shared.length < 2) return { text: 'NOT ENOUGH DATA', color: '#94a3b8' };
+
+    const first = myMap[shared[0]] - rvMap[shared[0]];
+    const last  = myMap[shared[shared.length-1]] - rvMap[shared[shared.length-1]];
+    const diff  = last - first;
+
+    if (diff < -50)  return { text: `▲ GAINING ${(Math.abs(diff)/1000).toFixed(3)}s/lap`, color: '#059669' };
+    if (diff > 50)   return { text: `▼ LOSING ${(diff/1000).toFixed(3)}s/lap`, color: '#dc2626' };
+    return { text: 'STABLE PACE', color: '#64748b' };
+}
+
+// ── ERS Battle Panel ──────────────────────────────────────────────────────────
+
+function giRenderBattleERSPanel(myCar, rivalCar) {
+    if (!myCar) return;
+
+    const myErsJ   = myCar.ersStoreEnergy ?? 0;
+    const myErsPct = Math.round(myErsJ / GI_ERS_MAX_JOULES * 100);
+    const rvErsJ   = rivalCar ? (rivalCar.ersStoreEnergy ?? 0) : 0;
+    const rvErsPct = Math.round(rvErsJ / GI_ERS_MAX_JOULES * 100);
+
+    const myMode = myCar.ersDeployMode ?? 0;
+    const rvMode = rivalCar ? (rivalCar.ersDeployMode ?? 0) : 0;
+
+    const sv = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+    const sn = (id, name, classes) => { const e = document.getElementById(id); if(e) { e.textContent = name; e.className = classes; } };
+
+    sn('gi-batt-my-ers-mode',    GI_ERS_MODE_NAMES[myMode] ?? 'NONE', `ers-mode-badge ${GI_ERS_MODE_CLASSES[myMode] ?? 'mode-none'}`);
+    sn('gi-batt-rival-ers-mode', GI_ERS_MODE_NAMES[rvMode] ?? 'NONE', `ers-mode-badge ${GI_ERS_MODE_CLASSES[rvMode] ?? 'mode-none'}`);
+
+    const myBar = document.getElementById('gi-batt-my-ers-bar');
+    const rvBar = document.getElementById('gi-batt-rival-ers-bar');
+    if (myBar) myBar.style.width = `${myErsPct}%`;
+    if (rvBar) rvBar.style.width = `${rvErsPct}%`;
+
+    sv('gi-batt-my-ers-pct',   `${myErsPct}%`);
+    sv('gi-batt-rival-ers-pct', `${rvErsPct}%`);
+
+    // ERS Deployed
+    const myDep  = (myCar.ersDeployedThisLap ?? 0) / 1_000_000;
+    const rvDep  = rivalCar ? ((rivalCar.ersDeployedThisLap ?? 0) / 1_000_000) : 0;
+    const depDiff = myDep - rvDep;
+
+    sv('gi-batt-my-dep',    `${myDep.toFixed(2)} MJ`);
+    sv('gi-batt-rival-dep', `${rvDep.toFixed(2)} MJ`);
+
+    const depDeltaEl = document.getElementById('gi-batt-dep-delta');
+    if (depDeltaEl) {
+        depDeltaEl.textContent = `Δ ${depDiff >= 0 ? '+' : ''}${depDiff.toFixed(2)} MJ`;
+        depDeltaEl.style.color  = depDiff > 0 ? '#d97706' : (depDiff < 0 ? '#059669' : '#64748b');
+    }
+
+    // MGU-K
+    const myMGUK = ((myCar.ersHarvestedThisLapMGUK ?? 0) / 1_000_000).toFixed(2);
+    const rvMGUK = ((rivalCar?.ersHarvestedThisLapMGUK ?? 0) / 1_000_000).toFixed(2);
+    sv('gi-batt-my-mguk',    `${myMGUK} MJ`);
+    sv('gi-batt-rival-mguk', `${rvMGUK} MJ`);
+}
+
+// ── Engineer Insights Rule Engine ─────────────────────────────────────────────
+
+function giGenerateInsights(myCar, rivalCar, myIdx, rivalIdx, data) {
+    const feed = document.getElementById('gi-insight-feed');
+    if (!feed || !myCar || !rivalCar) return;
+
+    const insights = [];
+    const myName   = (myCar.name    || 'DRIVER').toUpperCase().split(' ').pop();
+    const rvName   = (rivalCar.name || 'RIVAL').toUpperCase().split(' ').pop();
+    const totalLaps = data.totalLaps ?? 0;
+    const myLap   = myCar.currentLapNum ?? 0;
+    const lapsLeft = totalLaps > 0 ? totalLaps - myLap : 0;
+
+    // ── SECTOR ANALYSIS ───────────────────────────────────────────────────────
+
+    const sectors = [
+        { key: 's1', label: 'S1', myMs: myCar.lastLapSector1TimeInMS ?? 0, rvMs: rivalCar.lastLapSector1TimeInMS ?? 0 },
+        { key: 's2', label: 'S2', myMs: myCar.lastLapSector2TimeInMS ?? 0, rvMs: rivalCar.lastLapSector2TimeInMS ?? 0 },
+        { key: 's3', label: 'S3', myMs: myCar.lastLapSector3TimeInMS ?? 0, rvMs: rivalCar.lastLapSector3TimeInMS ?? 0 }
+    ];
+
+    sectors.forEach(sec => {
+        if (sec.myMs <= 0 || sec.rvMs <= 0) return;
+        const delta = sec.myMs - sec.rvMs;
+        const deltaS = (Math.abs(delta) / 1000).toFixed(3);
+
+        if (delta < -300) {
+            insights.push({
+                priority: 'positive',
+                icon: '🟢',
+                tag: 'ADVANTAGE',
+                text: `${myName} is ${deltaS}s faster through ${sec.label}`,
+                sub: `Consistent attack — use this margin to pressure ${rvName} in next lap`
+            });
+        } else if (delta > 300) {
+            insights.push({
+                priority: 'high',
+                icon: '🔴',
+                tag: 'SECTOR LOSS',
+                text: `Losing ${deltaS}s to ${rvName} in ${sec.label}`,
+                sub: sec.key === 's1'
+                    ? 'Check braking zones — late apex could recover time'
+                    : sec.key === 's2'
+                    ? 'Traction issue suspected — monitor rear wheel spin data'
+                    : 'Look for DRS opportunity or earlier exit from final corner'
+            });
+        }
+    });
+
+    // ── ERS DEPLOYMENT ────────────────────────────────────────────────────────
+
+    const myMode = myCar.ersDeployMode   ?? 0;
+    const rvMode = rivalCar.ersDeployMode ?? 0;
+
+    if (rvMode === 3 && myMode < 3) {
+        insights.push({
+            priority: 'critical',
+            icon: '⚡',
+            tag: 'CRITICAL',
+            text: `${rvName} is on OVERTAKE ERS — ${myName} must respond immediately`,
+            sub: 'Switch to OVERTAKE mode before DRS zone or risk losing position'
+        });
+    } else if (rvMode === 2 && myMode < 2) {
+        insights.push({
+            priority: 'high',
+            icon: '⚡',
+            tag: 'ERS GAP',
+            text: `${rvName} using HOTLAP ERS — mode mismatch detected`,
+            sub: 'Consider matching hotlap mode to maintain pace through DRS zones'
+        });
+    }
+
+    // ERS Store gap
+    const myErsJ  = myCar.ersStoreEnergy   ?? 0;
+    const rvErsJ  = rivalCar.ersStoreEnergy ?? 0;
+    const myPct   = Math.round(myErsJ  / GI_ERS_MAX_JOULES * 100);
+    const rvPct   = Math.round(rvErsJ  / GI_ERS_MAX_JOULES * 100);
+    const ersDiff = myPct - rvPct;
+
+    if (ersDiff < -20) {
+        insights.push({
+            priority: 'high',
+            icon: '🔋',
+            tag: 'ERS DEFICIT',
+            text: `ERS store ${Math.abs(ersDiff)}% lower than ${rvName}`,
+            sub: 'Harvest more with MEDIUM mode for 2–3 laps before next attack zone'
+        });
+    } else if (ersDiff > 25) {
+        insights.push({
+            priority: 'positive',
+            icon: '🔋',
+            tag: 'ERS ADVANTAGE',
+            text: `${myName} has ${ersDiff}% more ERS than ${rvName}`,
+            sub: 'Deploy OVERTAKE mode at next DRS zone for attack opportunity'
+        });
+    }
+
+    // ── TYRE ANALYSIS ─────────────────────────────────────────────────────────
+
+    const myAge  = myCar.tyresAgeLaps   ?? 0;
+    const rvAge  = rivalCar.tyresAgeLaps ?? 0;
+    const ageDiff = myAge - rvAge;
+
+    if (ageDiff > 10) {
+        insights.push({
+            priority: 'warning',
+            icon: '🏎️',
+            tag: 'TYRE CLIFF',
+            text: `${myName}'s tyres are ${ageDiff} laps older than ${rvName}`,
+            sub: lapsLeft > 0
+                ? `Pit window: ${data.pitStopWindowIdealLap ? `Ideal L${data.pitStopWindowIdealLap}` : 'confirm strategy now'}`
+                : 'Monitor degradation closely — manage pace'
+        });
+    } else if (ageDiff < -10) {
+        insights.push({
+            priority: 'positive',
+            icon: '🏎️',
+            tag: 'TYRE FRESH',
+            text: `${myName} has ${Math.abs(ageDiff)} fresher laps of tyre life vs ${rvName}`,
+            sub: 'Exploit tyre delta in final sector — rival may struggle on worn rubber'
+        });
+    }
+
+    // Tyre wear asymmetry
+    const myWear = myCar.tyreWear ?? [0,0,0,0];
+    const maxWear = Math.max(...myWear);
+    const minWear = Math.min(...myWear);
+    if (maxWear - minWear > 15) {
+        const corners = ['RL','RR','FL','FR'];
+        const worstCorner = corners[myWear.indexOf(maxWear)];
+        insights.push({
+            priority: 'warning',
+            icon: '⚠️',
+            tag: 'WEAR IMBALANCE',
+            text: `Tyre wear asymmetry: ${worstCorner} at ${Math.round(maxWear)}%`,
+            sub: 'Check brake bias or consider cooling lap to rebalance thermal load'
+        });
+    }
+
+    // ── FUEL STRATEGY ─────────────────────────────────────────────────────────
+
+    const myFuelLaps = myCar.fuelRemainingLaps   ?? 0;
+    const rvFuelLaps = rivalCar.fuelRemainingLaps ?? 0;
+    const fuelDiff   = myFuelLaps - rvFuelLaps;
+
+    if (fuelDiff < -1.5) {
+        insights.push({
+            priority: 'high',
+            icon: '⛽',
+            tag: 'FUEL DEFICIT',
+            text: `${rvName} can run ${Math.abs(fuelDiff).toFixed(1)} laps longer before pitting`,
+            sub: 'Rival has strategic undercut/overcut advantage — consider pitting earlier'
+        });
+    } else if (fuelDiff > 1.5) {
+        insights.push({
+            priority: 'info',
+            icon: '⛽',
+            tag: 'FUEL ADVANTAGE',
+            text: `${myName} has ${fuelDiff.toFixed(1)} laps more fuel flexibility`,
+            sub: 'Use overcut option: stay out longer when rival pits to gain track position'
+        });
+    }
+
+    // ── GAP TREND ────────────────────────────────────────────────────────────
+
+    if (giBattleGapHistory.length >= 2) {
+        const first = giBattleGapHistory[Math.max(0, giBattleGapHistory.length - 3)];
+        const last  = giBattleGapHistory[giBattleGapHistory.length - 1];
+        const lapsChecked = (last.lapNum - first.lapNum) || 1;
+        const gapChange = last.gapMs - first.gapMs; // > 0 means distance between cars grew
+        const diffS = (Math.abs(gapChange) / 1000).toFixed(3);
+        const myPos = myCar.position ?? 99;
+        const rivalPos = rivalCar.position ?? 99;
+        const isLeading = myPos < rivalPos;
+
+        if (isLeading) {
+            // We are ahead (e.g. Hamilton P1 vs Russell P2)
+            if (gapChange > 300) {
+                // We are pulling away from rival
+                insights.push({
+                    priority: 'positive',
+                    icon: '📈',
+                    tag: 'PULLING AWAY',
+                    text: `Lead over ${rvName} extended by ${diffS}s over last ${lapsChecked > 1 ? lapsChecked + ' laps' : 'lap'}`,
+                    sub: `Pace advantage verified — holding comfortable +${(last.gapMs / 1000).toFixed(3)}s lead margin`
+                });
+            } else if (gapChange < -300) {
+                // Rival is catching up to us
+                const lapsToCatch = last.gapMs > 1000 ? Math.ceil(last.gapMs / Math.abs(gapChange / (lapsChecked || 1))) : 1;
+                insights.push({
+                    priority: 'high',
+                    icon: '⚠️',
+                    tag: 'RIVAL CLOSING',
+                    text: `${rvName} is closing the gap by ${diffS}s over last ${lapsChecked > 1 ? lapsChecked + ' laps' : 'lap'}`,
+                    sub: `Lead margin reduced to ${(last.gapMs / 1000).toFixed(3)}s — prepare to defend DRS threat in ~${lapsToCatch} laps`
+                });
+            }
+        } else {
+            // We are chasing (e.g. P2 chasing P1)
+            if (gapChange < -300) {
+                // We are closing in on rival ahead
+                const lapsToDRS = last.gapMs > 1000 ? Math.ceil((last.gapMs - 1000) / Math.abs(gapChange / (lapsChecked || 1))) : 1;
+                insights.push({
+                    priority: 'positive',
+                    icon: '🎯',
+                    tag: 'CLOSING IN',
+                    text: `Gap to ${rvName} closing by ${diffS}s over last ${lapsChecked > 1 ? lapsChecked + ' laps' : 'lap'}`,
+                    sub: `Current deficit: ${(last.gapMs / 1000).toFixed(3)}s — estimated DRS range in ~${Math.max(1, lapsToDRS)} laps`
+                });
+            } else if (gapChange > 300) {
+                // Rival ahead is pulling away from us
+                insights.push({
+                    priority: 'high',
+                    icon: '📉',
+                    tag: 'FALLING BACK',
+                    text: `Gap to ${rvName} growing — ${diffS}s lost over last ${lapsChecked > 1 ? lapsChecked + ' laps' : 'lap'}`,
+                    sub: 'Pace deficit detected — check tyre degradation or deploy ERS to arrest the slide'
+                });
+            }
+        }
+    }
+
+    // ── DRS ───────────────────────────────────────────────────────────────────
+
+    const drsActivation = myCar.drsActivationDistance ?? 0;
+    if (drsActivation > 0 && drsActivation < 200) {
+        insights.push({
+            priority: 'critical',
+            icon: '🟣',
+            tag: 'DRS READY',
+            text: `DRS activation in ${drsActivation}m — attack opportunity imminent`,
+            sub: `Deploy OVERTAKE ERS NOW for maximum speed delta against ${rvName}`
+        });
+    }
+
+    // ── Render Insight Cards ──────────────────────────────────────────────────
+
+    if (insights.length === 0) {
+        feed.innerHTML = `<div class="gi-insight-card info">
+            <div class="gi-insight-icon">📊</div>
+            <div class="gi-insight-body">
+                <div class="gi-insight-text">Pace appears evenly matched — monitoring live telemetry</div>
+                <div class="gi-insight-subtext">No critical deltas detected this lap. Data will update each lap.</div>
+            </div>
+        </div>`;
+        return;
+    }
+
+    // Priority order: critical → high → warning → positive → info
+    const ORDER = { critical: 0, high: 1, warning: 2, positive: 3, info: 4 };
+    insights.sort((a, b) => (ORDER[a.priority] ?? 9) - (ORDER[b.priority] ?? 9));
+
+    feed.innerHTML = insights.slice(0, 7).map(ins => `
+        <div class="gi-insight-card ${ins.priority}">
+            <div class="gi-insight-icon">${ins.icon}</div>
+            <div class="gi-insight-body">
+                <span class="gi-insight-priority-tag ${ins.priority}">${ins.tag}</span>
+                <div class="gi-insight-text">${ins.text}</div>
+                ${ins.sub ? `<div class="gi-insight-subtext">${ins.sub}</div>` : ''}
+            </div>
+        </div>`
+    ).join('');
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -991,6 +1779,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Initialize tab: set analysis as default, hide battle
+    const analysisTab = document.getElementById('gi-tab-analysis');
+    const battleTab   = document.getElementById('gi-tab-battle');
+    if (analysisTab) analysisTab.style.display = 'flex';
+    if (battleTab)   battleTab.style.display   = 'none';
 
     giInitWebSocket();
 });

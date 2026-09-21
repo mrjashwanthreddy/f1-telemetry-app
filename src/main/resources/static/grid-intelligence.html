@@ -125,6 +125,24 @@
                     </div>
                 </div>
 
+                <!-- ═══ TAB SWITCHER ═══════════════════════════════════════════ -->
+                <div class="gi-tab-bar">
+                    <button id="gi-tab-analysis-btn" class="gi-tab-btn active" onclick="giSwitchTab('analysis')">
+                        📋 ANALYSIS
+                    </button>
+                    <button id="gi-tab-battle-btn" class="gi-tab-btn" onclick="giSwitchTab('battle')">
+                        ⚔️ BATTLE MODE
+                    </button>
+                    <!-- Battle active indicator -->
+                    <div id="gi-battle-rival-info" style="display:none;margin-left:auto;align-items:center;gap:8px;padding-right:12px;">
+                        <span style="font-size:0.6rem;color:#6b21a8;font-weight:800;letter-spacing:0.5px;">VS</span>
+                        <span id="gi-battle-rival-name-badge" class="gi-battle-rival-header-badge">—</span>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB: ANALYSIS (existing panels) ═══════════════════════ -->
+                <div id="gi-tab-analysis" class="gi-tab-content gi-tab-content-active">
+
                 <!-- Scrollable Body -->
                 <div class="gi-detail-body" id="gi-detail-body">
 
@@ -168,7 +186,7 @@
                         <!-- Column 1: Live Inputs & Telemetry Comparison -->
                         <div class="gi-panel">
                             <div class="gi-panel-title">
-                                <span class="gi-panel-title-text">⚡ Inputs & Comparison</span>
+                                <span class="gi-panel-title-text">⚡ Inputs &amp; Comparison</span>
                                 <div id="gi-comp-badge" class="comp-badge">VS YOU</div>
                             </div>
                             <div class="gi-panel-body">
@@ -479,7 +497,7 @@
                         <!-- Column 3: Strategy & Status -->
                         <div class="gi-panel">
                             <div class="gi-panel-title">
-                                <span class="gi-panel-title-text">📊 Strategy & Status</span>
+                                <span class="gi-panel-title-text">📊 Strategy &amp; Status</span>
                                 <span style="font-size:0.6rem;color:#6b21a8;font-weight:800;">LIVE</span>
                             </div>
                             <div class="gi-panel-body">
@@ -595,6 +613,184 @@
                     </div><!-- end gi-deep-dive-grid -->
 
                 </div><!-- end gi-detail-body -->
+                </div><!-- end gi-tab-analysis -->
+
+                <!-- ═══ TAB: BATTLE MODE ══════════════════════════════════════ -->
+                <div id="gi-tab-battle" class="gi-tab-content">
+
+                    <!-- Battle Header: MY DRIVER vs RIVAL selector -->
+                    <div class="gi-battle-header" id="gi-battle-header">
+
+                        <!-- My Driver card -->
+                        <div class="gi-battle-driver-card gi-battle-my-card">
+                            <div class="gi-battle-driver-label">MY DRIVER</div>
+                            <div id="gi-battle-my-name" class="gi-battle-driver-name">—</div>
+                            <div id="gi-battle-my-pos" class="gi-battle-driver-pos">P—</div>
+                        </div>
+
+                        <!-- VS + Gap Trend -->
+                        <div class="gi-battle-vs-col">
+                            <div class="gi-battle-vs-text">⚔️</div>
+                            <div id="gi-battle-gap-trend" class="gi-battle-gap-trend">
+                                <span id="gi-battle-gap-val" class="gi-battle-gap-val">—</span>
+                                <span id="gi-battle-gap-arrow" class="gi-battle-gap-arrow">→</span>
+                                <span id="gi-battle-gap-trend-txt" class="gi-battle-gap-trend-txt">STABLE</span>
+                            </div>
+                            <div id="gi-battle-gap-sublabel" style="font-size:0.55rem;color:#475569;font-weight:800;letter-spacing:0.5px;text-align:center;margin-top:2px;">GAP TO RIVAL</div>
+                        </div>
+
+                        <!-- Rival selector card -->
+                        <div class="gi-battle-driver-card gi-battle-rival-card">
+                            <div class="gi-battle-driver-label">RIVAL</div>
+                            <div id="gi-battle-rival-name" class="gi-battle-driver-name rival">—</div>
+                            <div id="gi-battle-rival-pos" class="gi-battle-driver-pos">P—</div>
+                            <select id="gi-rival-select" class="gi-rival-select" onchange="giSetBattleRival(parseInt(this.value))">
+                                <option value="-1">— SELECT RIVAL —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Lap Delta Mini Trend Bar (last 5 laps) -->
+                    <div class="gi-battle-trend-bar" id="gi-battle-trend-bar">
+                        <div class="gi-battle-trend-label">LAP-BY-LAP DELTA (MY DRIVER vs RIVAL) — LAST 5 LAPS</div>
+                        <div class="gi-battle-trend-cells" id="gi-battle-trend-cells">
+                            <!-- Filled by JS -->
+                            <div class="gi-trend-empty">SELECT A RIVAL TO SEE DELTA TREND</div>
+                        </div>
+                    </div>
+
+                    <!-- Sector Comparison Grid: S1 | S2 | S3 -->
+                    <div class="gi-battle-sector-wrap">
+                        <div class="gi-battle-sector-title">⏱️ SECTOR BREAKDOWN — LAST LAP</div>
+                        <div class="gi-battle-sector-grid">
+
+                            <!-- SECTOR 1 -->
+                            <div class="gi-battle-sector-cell" id="gi-bs-s1">
+                                <div class="gi-bs-sector-label">S1</div>
+                                <div class="gi-bs-times-row">
+                                    <div class="gi-bs-driver-time">
+                                        <div class="gi-bs-driver-tag my">ME</div>
+                                        <div id="gi-bs-my-s1" class="gi-bs-time-val">—</div>
+                                    </div>
+                                    <div class="gi-bs-delta-col">
+                                        <div id="gi-bs-delta-s1" class="gi-bs-delta even">Δ —</div>
+                                    </div>
+                                    <div class="gi-bs-driver-time right">
+                                        <div id="gi-bs-rival-s1" class="gi-bs-time-val rival">—</div>
+                                        <div class="gi-bs-driver-tag rival">RIVAL</div>
+                                    </div>
+                                </div>
+                                <div class="gi-bs-gain-bar-wrap">
+                                    <div id="gi-bs-bar-s1" class="gi-bs-gain-bar"></div>
+                                </div>
+                                <div id="gi-bs-trend-s1" class="gi-bs-sector-trend">—</div>
+                            </div>
+
+                            <!-- SECTOR 2 -->
+                            <div class="gi-battle-sector-cell" id="gi-bs-s2">
+                                <div class="gi-bs-sector-label">S2</div>
+                                <div class="gi-bs-times-row">
+                                    <div class="gi-bs-driver-time">
+                                        <div class="gi-bs-driver-tag my">ME</div>
+                                        <div id="gi-bs-my-s2" class="gi-bs-time-val">—</div>
+                                    </div>
+                                    <div class="gi-bs-delta-col">
+                                        <div id="gi-bs-delta-s2" class="gi-bs-delta even">Δ —</div>
+                                    </div>
+                                    <div class="gi-bs-driver-time right">
+                                        <div id="gi-bs-rival-s2" class="gi-bs-time-val rival">—</div>
+                                        <div class="gi-bs-driver-tag rival">RIVAL</div>
+                                    </div>
+                                </div>
+                                <div class="gi-bs-gain-bar-wrap">
+                                    <div id="gi-bs-bar-s2" class="gi-bs-gain-bar"></div>
+                                </div>
+                                <div id="gi-bs-trend-s2" class="gi-bs-sector-trend">—</div>
+                            </div>
+
+                            <!-- SECTOR 3 -->
+                            <div class="gi-battle-sector-cell" id="gi-bs-s3">
+                                <div class="gi-bs-sector-label">S3</div>
+                                <div class="gi-bs-times-row">
+                                    <div class="gi-bs-driver-time">
+                                        <div class="gi-bs-driver-tag my">ME</div>
+                                        <div id="gi-bs-my-s3" class="gi-bs-time-val">—</div>
+                                    </div>
+                                    <div class="gi-bs-delta-col">
+                                        <div id="gi-bs-delta-s3" class="gi-bs-delta even">Δ —</div>
+                                    </div>
+                                    <div class="gi-bs-driver-time right">
+                                        <div id="gi-bs-rival-s3" class="gi-bs-time-val rival">—</div>
+                                        <div class="gi-bs-driver-tag rival">RIVAL</div>
+                                    </div>
+                                </div>
+                                <div class="gi-bs-gain-bar-wrap">
+                                    <div id="gi-bs-bar-s3" class="gi-bs-gain-bar"></div>
+                                </div>
+                                <div id="gi-bs-trend-s3" class="gi-bs-sector-trend">—</div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ERS Battle Row -->
+                    <div class="gi-battle-ers-row">
+                        <div class="gi-battle-ers-title">⚡ ERS BATTLE — THIS LAP</div>
+                        <div class="gi-battle-ers-grid">
+                            <div class="gi-battle-ers-cell">
+                                <div class="gi-battle-ers-cell-label">STORE ENERGY</div>
+                                <div class="gi-battle-ers-compare-row">
+                                    <div class="gi-battle-ers-side my">
+                                        <div id="gi-batt-my-ers-mode" class="ers-mode-badge mode-none">NONE</div>
+                                        <div class="gi-battle-ers-bar-wrap">
+                                            <div id="gi-batt-my-ers-bar" class="gi-battle-ers-bar" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-batt-my-ers-pct" class="gi-battle-ers-pct">0%</span>
+                                    </div>
+                                    <div class="gi-battle-ers-vs">ERS</div>
+                                    <div class="gi-battle-ers-side rival">
+                                        <div id="gi-batt-rival-ers-mode" class="ers-mode-badge mode-none">NONE</div>
+                                        <div class="gi-battle-ers-bar-wrap rival">
+                                            <div id="gi-batt-rival-ers-bar" class="gi-battle-ers-bar rival" style="width:0%"></div>
+                                        </div>
+                                        <span id="gi-batt-rival-ers-pct" class="gi-battle-ers-pct rival">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gi-battle-ers-cell">
+                                <div class="gi-battle-ers-cell-label">DEPLOYED (LAP)</div>
+                                <div class="gi-battle-ers-deployed-row">
+                                    <span id="gi-batt-my-dep" class="gi-battle-dep-val my">0.00 MJ</span>
+                                    <span id="gi-batt-dep-delta" class="gi-battle-dep-delta">Δ 0</span>
+                                    <span id="gi-batt-rival-dep" class="gi-battle-dep-val rival">0.00 MJ</span>
+                                </div>
+                            </div>
+                            <div class="gi-battle-ers-cell">
+                                <div class="gi-battle-ers-cell-label">HARVESTED MGU-K</div>
+                                <div class="gi-battle-ers-deployed-row">
+                                    <span id="gi-batt-my-mguk" class="gi-battle-dep-val my">0.00 MJ</span>
+                                    <span style="color:#475569;font-size:0.6rem;font-weight:800;">vs</span>
+                                    <span id="gi-batt-rival-mguk" class="gi-battle-dep-val rival">0.00 MJ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Engineer Insights Feed -->
+                    <div class="gi-insight-section">
+                        <div class="gi-insight-section-title">
+                            <span>🧠 RACE ENGINEER INSIGHTS</span>
+                            <span id="gi-insight-update-time" class="gi-insight-update-badge">LIVE</span>
+                        </div>
+                        <div id="gi-insight-feed" class="gi-insight-feed">
+                            <div class="gi-insight-waiting">
+                                Select a rival to generate race engineer coaching insights
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- end gi-tab-battle -->
+
             </div><!-- end gi-detail-content -->
 
         </main><!-- end gi-main-panel -->

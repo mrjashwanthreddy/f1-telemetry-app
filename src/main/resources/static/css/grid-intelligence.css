@@ -1443,3 +1443,787 @@ body {
     font-weight: 700;
 }
 
+
+
+/* ==========================================================================
+   BATTLE MODE — RACE ENGINEER COMPARISON FEATURE
+   ========================================================================== */
+
+/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
+.gi-tab-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px 0;
+    background: rgba(124, 58, 237, 0.04);
+    border-bottom: 1.5px solid rgba(124, 58, 237, 0.12);
+    flex-shrink: 0;
+}
+
+.gi-tab-btn {
+    padding: 7px 18px;
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border: 1.5px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    color: #6b21a8;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    position: relative;
+    bottom: -1.5px;
+}
+
+.gi-tab-btn:hover {
+    background: rgba(124, 58, 237, 0.08);
+    color: #7c3aed;
+}
+
+.gi-tab-btn.active {
+    background: white;
+    color: #7c3aed;
+    border-color: rgba(124, 58, 237, 0.2);
+    border-bottom-color: white;
+    box-shadow: 0 -2px 8px rgba(124, 58, 237, 0.08);
+}
+
+.gi-tab-btn:nth-child(2).active {
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.25);
+    border-bottom-color: white;
+}
+
+/* ── Tab Content ─────────────────────────────────────────────────────────── */
+.gi-tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.2) transparent;
+}
+
+.gi-tab-content-active {
+    display: flex;
+}
+
+/* ── Battle Rival Header Badge ───────────────────────────────────────────── */
+.gi-battle-rival-header-badge {
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    border-radius: 4px;
+    padding: 2px 7px;
+}
+
+/* ── Battle Header (MY DRIVER ⚔️ RIVAL) ─────────────────────────────────── */
+.gi-battle-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    padding: 14px 16px 10px;
+    background: linear-gradient(135deg, rgba(220,38,38,0.04), rgba(124,58,237,0.04));
+    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+    flex-shrink: 0;
+}
+
+.gi-battle-driver-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(124, 58, 237, 0.15);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(6px);
+}
+
+.gi-battle-my-card {
+    border-color: rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(255,255,255,0.8));
+}
+
+.gi-battle-rival-card {
+    border-color: rgba(220, 38, 38, 0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(220,38,38,0.06));
+    align-items: flex-end;
+}
+
+.gi-battle-driver-label {
+    font-family: var(--font-ui);
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.gi-battle-driver-name {
+    font-family: var(--font-data);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #7c3aed;
+    line-height: 1;
+}
+
+.gi-battle-driver-name.rival {
+    color: #dc2626;
+}
+
+.gi-battle-driver-pos {
+    font-family: var(--font-ui);
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+}
+
+/* Rival dropdown */
+.gi-rival-select {
+    margin-top: 4px;
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.06);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-radius: 5px;
+    padding: 4px 7px;
+    cursor: pointer;
+    outline: none;
+    max-width: 100%;
+}
+
+.gi-rival-select:focus {
+    border-color: rgba(220, 38, 38, 0.5);
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.08);
+}
+
+/* VS Column */
+.gi-battle-vs-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 90px;
+}
+
+.gi-battle-vs-text {
+    font-size: 1.4rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+}
+
+.gi-battle-gap-trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+.gi-battle-gap-val {
+    font-family: var(--font-data);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e1b4b;
+}
+
+.gi-battle-gap-arrow {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #64748b;
+    transition: color 0.3s;
+}
+
+.gi-battle-gap-arrow.closing { color: #10b981; }
+.gi-battle-gap-arrow.opening { color: #ef4444; }
+
+.gi-battle-gap-trend-txt {
+    font-family: var(--font-ui);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.gi-battle-gap-trend-txt.closing { color: #059669; }
+.gi-battle-gap-trend-txt.opening { color: #dc2626; }
+
+/* ── Lap Delta Trend Bar ─────────────────────────────────────────────────── */
+.gi-battle-trend-bar {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.08);
+    background: rgba(248, 245, 255, 0.6);
+    flex-shrink: 0;
+}
+
+.gi-battle-trend-label {
+    font-family: var(--font-ui);
+    font-size: 0.53rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.gi-battle-trend-cells {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    min-height: 48px;
+}
+
+.gi-trend-empty {
+    font-family: var(--font-ui);
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+    margin: auto;
+    text-align: center;
+}
+
+.gi-trend-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    max-width: 80px;
+}
+
+.gi-trend-cell-label {
+    font-family: var(--font-ui);
+    font-size: 0.5rem;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+}
+
+.gi-trend-cell-bar-wrap {
+    width: 100%;
+    height: 32px;
+    background: rgba(124, 58, 237, 0.06);
+    border-radius: 4px;
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gi-trend-cell-bar-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-radius: 3px;
+    transition: height 0.3s ease;
+}
+
+.gi-trend-cell-bar-fill.gain {
+    background: linear-gradient(135deg, #10b981, #059669);
+    bottom: 0;
+}
+
+.gi-trend-cell-bar-fill.loss {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    bottom: 0;
+}
+
+.gi-trend-cell-delta {
+    font-family: var(--font-data);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.gi-trend-cell-delta.gain { color: #059669; }
+.gi-trend-cell-delta.loss { color: #dc2626; }
+.gi-trend-cell-delta.even { color: #64748b; }
+
+/* ── Sector Comparison Grid ─────────────────────────────────────────────── */
+.gi-battle-sector-wrap {
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.08);
+    flex-shrink: 0;
+}
+
+.gi-battle-sector-title {
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #6b21a8;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.gi-battle-sector-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.gi-battle-sector-cell {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1.5px solid rgba(124, 58, 237, 0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.gi-battle-sector-cell:hover {
+    border-color: rgba(124, 58, 237, 0.25);
+    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.08);
+}
+
+.gi-battle-sector-cell.gaining { border-color: rgba(16, 185, 129, 0.35); }
+.gi-battle-sector-cell.losing  { border-color: rgba(239, 68, 68, 0.35); }
+
+.gi-bs-sector-label {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #7c3aed;
+    text-transform: uppercase;
+    border-bottom: 1.5px solid rgba(124, 58, 237, 0.1);
+    padding-bottom: 5px;
+}
+
+.gi-bs-times-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.gi-bs-driver-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    flex: 1;
+}
+
+.gi-bs-driver-time.right {
+    align-items: flex-end;
+}
+
+.gi-bs-driver-tag {
+    font-family: var(--font-ui);
+    font-size: 0.48rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.gi-bs-driver-tag.my {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.gi-bs-driver-tag.rival {
+    background: rgba(220, 38, 38, 0.08);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.18);
+}
+
+.gi-bs-time-val {
+    font-family: var(--font-data);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e1b4b;
+    letter-spacing: 0.3px;
+    line-height: 1;
+}
+
+.gi-bs-time-val.rival {
+    color: #dc2626;
+}
+
+.gi-bs-delta-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.gi-bs-delta {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+    text-align: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.gi-bs-delta.gain {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.gi-bs-delta.loss {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.gi-bs-delta.even {
+    background: rgba(100, 116, 139, 0.08);
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+/* Gain/Loss Bar */
+.gi-bs-gain-bar-wrap {
+    height: 4px;
+    background: rgba(124, 58, 237, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.gi-bs-gain-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease, background 0.3s;
+    position: absolute;
+}
+
+/* Sector trend text */
+.gi-bs-sector-trend {
+    font-family: var(--font-ui);
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+}
+
+/* ── ERS Battle Row ──────────────────────────────────────────────────────── */
+.gi-battle-ers-row {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.08);
+    background: rgba(248, 245, 255, 0.4);
+    flex-shrink: 0;
+}
+
+.gi-battle-ers-title {
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #6b21a8;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.gi-battle-ers-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+}
+
+.gi-battle-ers-cell {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    border-radius: 7px;
+    padding: 8px 10px;
+}
+
+.gi-battle-ers-cell-label {
+    font-family: var(--font-ui);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+}
+
+.gi-battle-ers-compare-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.gi-battle-ers-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    flex: 1;
+}
+
+.gi-battle-ers-side.rival {
+    align-items: flex-end;
+}
+
+.gi-battle-ers-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(124, 58, 237, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.gi-battle-ers-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #9333ea);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.gi-battle-ers-bar.rival {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    float: right;
+}
+
+.gi-battle-ers-pct {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7c3aed;
+    letter-spacing: 0.3px;
+}
+
+.gi-battle-ers-pct.rival {
+    color: #dc2626;
+}
+
+.gi-battle-ers-vs {
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 800;
+    color: #6b21a8;
+    letter-spacing: 0.5px;
+    writing-mode: vertical-rl;
+    padding: 2px;
+    opacity: 0.5;
+}
+
+.gi-battle-ers-deployed-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.gi-battle-dep-val {
+    font-family: var(--font-data);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.gi-battle-dep-val.my { color: #7c3aed; }
+.gi-battle-dep-val.rival { color: #dc2626; }
+
+.gi-battle-dep-delta {
+    font-family: var(--font-ui);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.08);
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+/* ── Engineer Insights Feed ──────────────────────────────────────────────── */
+.gi-insight-section {
+    padding: 12px 16px 16px;
+    flex: 1;
+    min-height: 120px;
+}
+
+.gi-insight-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #6b21a8;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.gi-insight-update-badge {
+    font-size: 0.5rem;
+    font-weight: 800;
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: 0.5px;
+    animation: insightPulse 2s ease-in-out infinite;
+}
+
+@keyframes insightPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.gi-insight-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.gi-insight-waiting {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    letter-spacing: 0.3px;
+}
+
+/* Individual insight card */
+.gi-insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: 7px;
+    border: 1.5px solid transparent;
+    background: rgba(255, 255, 255, 0.8);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    animation: insightSlideIn 0.25s ease-out;
+}
+
+@keyframes insightSlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.gi-insight-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+}
+
+/* Priority variants */
+.gi-insight-card.critical {
+    border-color: rgba(220, 38, 38, 0.3);
+    background: linear-gradient(135deg, rgba(220,38,38,0.05), rgba(255,255,255,0.9));
+}
+.gi-insight-card.high {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(255,255,255,0.9));
+}
+.gi-insight-card.positive {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(255,255,255,0.9));
+}
+.gi-insight-card.info {
+    border-color: rgba(124, 58, 237, 0.18);
+    background: rgba(255, 255, 255, 0.75);
+}
+.gi-insight-card.warning {
+    border-color: rgba(245, 158, 11, 0.2);
+    background: linear-gradient(135deg, rgba(245,158,11,0.03), rgba(255,255,255,0.9));
+}
+
+.gi-insight-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    line-height: 1.3;
+}
+
+.gi-insight-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.gi-insight-priority-tag {
+    font-family: var(--font-ui);
+    font-size: 0.45rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 2px;
+}
+
+.gi-insight-priority-tag.critical { background: rgba(220,38,38,0.12); color: #dc2626; }
+.gi-insight-priority-tag.high     { background: rgba(245,158,11,0.12); color: #d97706; }
+.gi-insight-priority-tag.positive { background: rgba(16,185,129,0.12); color: #059669; }
+.gi-insight-priority-tag.warning  { background: rgba(245,158,11,0.1);  color: #b45309; }
+.gi-insight-priority-tag.info     { background: rgba(124,58,237,0.1);  color: #7c3aed; }
+
+.gi-insight-text {
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #1e1b4b;
+    line-height: 1.4;
+    letter-spacing: 0.1px;
+}
+
+.gi-insight-subtext {
+    font-family: var(--font-ui);
+    font-size: 0.57rem;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.35;
+}
+
+/* Responsive adjustments for narrow panel */
+@media (max-width: 900px) {
+    .gi-battle-sector-grid {
+        grid-template-columns: 1fr;
+    }
+    .gi-battle-ers-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .gi-battle-header {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .gi-battle-vs-col {
+        flex-direction: row;
+        justify-content: center;
+        min-width: auto;
+    }
+}
